@@ -2,6 +2,8 @@
 
 A complete Void Linux setup system based on the original [**Omarchy**](https://github.com/basecamp/omarchy) configuration, adapted for Void Linux with Hyprland.
 
+![omarchy-void](./screenshot.png)
+
 ## Features
 
 - **Complete Hyprland Setup** - Full Wayland compositor with all necessary dependencies
