@@ -118,6 +118,6 @@ fi
 echo ""
 echo -e "${GREEN}Configuration completed!${NC}"
 echo ""
-echo -e "${YELLOW}Note:${NC} PATH changes in /etc/environment require a reboot to take effect system-wide"
+echo -e "${YELLOW}Note:${NC} PATH changed in /etc/environment requires a reboot to take effect"
 
 module_end
