@@ -18,18 +18,18 @@ execute xbps-query -Rs hypr
 
 # Core Hyprland packages
 HYPRLAND_CORE=(
-    hyprland
-    hyprland-protocols
-    hyprland-qtutils
-    xorg-server-xwayland
-    xdg-desktop-portal-hyprland
-    xdg-desktop-portal
-    xdg-utils
-    xorg
-    wayland
-    wayland-protocols
-    xdg-desktop-portal-wlr
-    xdg-desktop-portal-gtk
+  hyprland
+  hyprland-protocols
+  hyprland-qtutils
+  xorg-server-xwayland
+  xdg-desktop-portal-hyprland
+  xdg-desktop-portal
+  xdg-utils
+  xorg
+  wayland
+  wayland-protocols
+  xdg-desktop-portal-wlr
+  xdg-desktop-portal-gtk
 )
 
 install_packages "${HYPRLAND_CORE[@]}"
@@ -40,3 +40,4 @@ install_packages void-repo-multilib void-repo-nonfree
 execute sudo xbps-install -S
 
 module_end
+

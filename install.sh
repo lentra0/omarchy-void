@@ -39,10 +39,11 @@ echo -e "${YELLOW}Press Ctrl+C to cancel the reboot${NC}"
 echo ""
 
 for i in {5..1}; do
-    echo -ne "${RED}Rebooting in $i seconds...${NC}\r"
-    sleep 1
+  echo -ne "${RED}Rebooting in $i seconds...${NC}\r"
+  sleep 1
 done
 
 echo -e "\n${GREEN}${BOLD}Rebooting system now...${NC}"
 
 execute loginctl reboot
+

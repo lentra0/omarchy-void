@@ -7,24 +7,24 @@ module_start "Multimedia Installation"
 
 # Audio
 AUDIO_PACKAGES=(
-    pipewire
-    wireplumber
+  pipewire
+  wireplumber
 )
 
 install_packages "${AUDIO_PACKAGES[@]}"
 
 # Video and codecs
 VIDEO_PACKAGES=(
-    ffmpeg
+  ffmpeg
 )
 
 install_packages "${VIDEO_PACKAGES[@]}"
 
 # Wallpaper tools
 WALLPAPER_TOOLS=(
-    swaybg
-    mpvpaper
-    swww
+  swaybg
+  mpvpaper
+  swww
 )
 
 install_packages "${WALLPAPER_TOOLS[@]}"
@@ -33,3 +33,4 @@ install_packages "${WALLPAPER_TOOLS[@]}"
 install_packages libnotify
 
 module_end
+
