@@ -28,7 +28,7 @@ install_packages "${MODERN_CLI[@]}"
 # File managers
 FILE_MANAGERS=(
   yazi
-  nemo
+  nautilus
 )
 
 install_packages "${FILE_MANAGERS[@]}"
