@@ -1,6 +1,6 @@
 # omarchy-void
 
-A complete Void Linux setup system based on the original [**Omarchy**](https://github.com/basecamp/omarchy) configuration, adapted for Void Linux with Hyprland.
+A complete Void Linux + Hyprland setup based on the original [**Omarchy**](https://github.com/basecamp/omarchy) configuration and my preferences.
 
 ![omarchy-void](./screenshot.png)
 
