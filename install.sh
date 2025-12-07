@@ -19,7 +19,8 @@ source scripts/05-shell.sh
 source scripts/06-utilities.sh
 source scripts/07-multimedia.sh
 source scripts/08-theme.sh
-source scripts/09-misc.sh
+source scripts/09-default.sh
+source scripts/10-misc.sh
 
 echo -e "${GREEN}${BOLD}========================================${NC}"
 echo -e "${GREEN}${BOLD}    All modules installed successfully!${NC}"
@@ -46,4 +47,3 @@ done
 echo -e "\n${GREEN}${BOLD}Rebooting system now...${NC}"
 
 execute loginctl reboot
-
