@@ -98,49 +98,4 @@ else
   log_warning "Mako theme file not found: $TOKYO_THEME/mako.ini"
 fi
 
-# Install and configure LazyVim
-echo "Installing and configuring LazyVim..."
-
-# Remove existing Neovim config if exists
-if [ -d ~/.config/nvim ]; then
-  echo "Removing existing Neovim configuration..."
-  execute rm -rf ~/.config/nvim
-fi
-
-# Clone LazyVim starter
-echo "Cloning LazyVim starter..."
-execute git clone https://github.com/LazyVim/starter ~/.config/nvim
-
-# Check if custom config directory exists
-CUSTOM_NVIM_CONFIG="$HOME/.local/share/omarchy/config/nvim"
-if [ -d "$CUSTOM_NVIM_CONFIG" ]; then
-  echo "Copying custom Neovim configuration..."
-  execute cp -R "$CUSTOM_NVIM_CONFIG"/* ~/.config/nvim/
-else
-  log_warning "Custom Neovim config not found: $CUSTOM_NVIM_CONFIG"
-fi
-
-# Remove .git directory from LazyVim config
-echo "Cleaning up LazyVim repository..."
-if [ -d ~/.config/nvim/.git ]; then
-  execute rm -rf ~/.config/nvim/.git
-fi
-
-# Disable relative line numbers
-echo "Disabling relative line numbers..."
-NVIM_OPTIONS_FILE="$HOME/.config/nvim/lua/config/options.lua"
-if [ -f "$NVIM_OPTIONS_FILE" ]; then
-  execute echo "vim.opt.relativenumber = false" >>"$NVIM_OPTIONS_FILE"
-  log_success "Relative line numbers disabled"
-else
-  log_warning "Neovim options file not found: $NVIM_OPTIONS_FILE"
-fi
-
-# Check if Neovim is installed
-if ! command -v nvim >/dev/null 2>&1; then
-  log_warning "Neovim is not installed. Installing now..."
-  install_packages neovim
-fi
-
 module_end
-

@@ -14,10 +14,8 @@ GRAPHICS_PACKAGES=(
   vulkan-loader-32bit
   libspa-vulkan
   libspa-vulkan-32bit
-  libglapi
 )
 
 install_packages "${GRAPHICS_PACKAGES[@]}"
 
 module_end
-

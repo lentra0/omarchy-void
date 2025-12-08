@@ -207,7 +207,7 @@ trap 'main_error_handler ${LINENO} "$BASH_COMMAND" "${BASH_SOURCE[0]}" $?' ERR
 
 show_error_banner() {
   echo -e "\n${RED_BG}${WHITE}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${RED_BG}${WHITE}${BOLD}║                    CRITICAL ERROR DETECTED                    ║${NC}"
+  echo -e "${RED_BG}${WHITE}${BOLD}║                    CRITICAL ERROR DETECTED                   ║${NC}"
   echo -e "${RED_BG}${WHITE}${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
 }
 

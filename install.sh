@@ -7,20 +7,25 @@ set -Euo pipefail
 
 export PATH="$HOME/.local/share/omarchy/bin:$PATH"
 
+WORKDIR=~/.local/share/omarchy
+
 # Load error handler
-source scripts/error.sh
+source ${WORKDIR}/scripts/error.sh
+
+install_packages bc
 
 # Source all modules in order
-source scripts/01-hyprland-core.sh
-source scripts/02-graphics.sh
-source scripts/03-system-services.sh
-source scripts/04-desktop-tools.sh
-source scripts/05-shell.sh
-source scripts/06-utilities.sh
-source scripts/07-multimedia.sh
-source scripts/08-theme.sh
-source scripts/09-default.sh
-source scripts/10-misc.sh
+source ${WORKDIR}/scripts/01-hyprland-core.sh
+source ${WORKDIR}/scripts/02-graphics.sh
+source ${WORKDIR}/scripts/03-system-services.sh
+source ${WORKDIR}/scripts/04-desktop-tools.sh
+source ${WORKDIR}/scripts/05-shell.sh
+source ${WORKDIR}/scripts/06-utilities.sh
+source ${WORKDIR}/scripts/07-multimedia.sh
+source ${WORKDIR}/scripts/08-theme.sh
+source ${WORKDIR}/scripts/09-config.sh
+source ${WORKDIR}/scripts/10-default.sh
+source ${WORKDIR}/scripts/11-misc.sh
 
 echo -e "${GREEN}${BOLD}========================================${NC}"
 echo -e "${GREEN}${BOLD}    All modules installed successfully!${NC}"
@@ -35,15 +40,11 @@ echo "4. All packages are installed and configured"
 echo ""
 
 # Countdown and reboot
-echo -e "${RED}${BOLD}System will reboot in 5 seconds...${NC}"
-echo -e "${YELLOW}Press Ctrl+C to cancel the reboot${NC}"
-echo ""
-
-for i in {5..1}; do
+for i in {10..1}; do
   echo -ne "${RED}Rebooting in $i seconds...${NC}\r"
   sleep 1
 done
 
 echo -e "\n${GREEN}${BOLD}Rebooting system now...${NC}"
 
-execute loginctl reboot
+sudo reboot

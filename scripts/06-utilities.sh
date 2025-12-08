@@ -72,7 +72,7 @@ install_packages "${INPUT_METHOD[@]}"
 GAMING=(
   gamemode
   gamescope
-  Mangohud
+  MangoHud
   vkBasalt
 )
 
@@ -88,7 +88,7 @@ install_packages flatpak
 if command -v flatpak >/dev/null 2>&1; then
   echo "Setting up Flatpak..."
   if ! flatpak remotes | grep -q flathub; then
-    execute flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    execute sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
   fi
 fi
 

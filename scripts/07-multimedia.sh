@@ -9,6 +9,7 @@ module_start "Multimedia Installation"
 AUDIO_PACKAGES=(
   pipewire
   wireplumber
+  pulseaudio
 )
 
 install_packages "${AUDIO_PACKAGES[@]}"
@@ -33,4 +34,3 @@ install_packages "${WALLPAPER_TOOLS[@]}"
 install_packages libnotify
 
 module_end
-
