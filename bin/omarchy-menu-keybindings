@@ -1,49 +1,51 @@
 #!/bin/bash
 
 # A script to display Hyprland keybindings defined in your configuration
-# using walker for an interactive search menu.
 
 # Fetch dynamic keybindings from Hyprland
-#
 # Also do some pre-processing:
 # - Remove standard Omarchy bin path prefix
 # - Remove uwsm prefix
 # - Map numeric modifier key mask to a textual rendition
 # - Output comma-separated values that the parser can understand
 dynamic_bindings() {
-  hyprctl -j binds | \
-    jq -r '.[] | {modmask, key, keycode, description, dispatcher, arg} | "\(.modmask),\(.key)@\(.keycode),\(.description),\(.dispatcher),\(.arg)"' | \
+  hyprctl -j binds 2>/dev/null |
+    jq -r '.[] | {modmask, key, keycode, description, dispatcher, arg} | "\(.modmask),\(.key)@\(.keycode),\(.description),\(.dispatcher),\(.arg)"' |
     sed -r \
-        -e 's/null//' \
-        -e 's,~/.local/share/omarchy/bin/,,' \
-        -e 's,uwsm app -- ,,' \
-        -e 's/@0//' \
-        -e 's/,@/,code:/' \
-        -e 's/^0,/,/' \
-        -e 's/^1,/SHIFT,/' \
-        -e 's/^4,/CTRL,/' \
-        -e 's/^5,/SHIFT CTRL,/' \
-        -e 's/^8,/ALT,/' \
-        -e 's/^9,/SHIFT ALT,/' \
-        -e 's/^12,/CTRL ALT,/' \
-        -e 's/^13,/SHIFT CTRL ALT,/' \
-        -e 's/^64,/SUPER,/' \
-        -e 's/^65,/SUPER SHIFT,/' \
-        -e 's/^68,/SUPER CTRL,/' \
-        -e 's/^69,/SUPER SHIFT CTRL,/' \
-        -e 's/^72,/SUPER ALT,/'
+      -e 's/null//' \
+      -e 's,~/.local/share/omarchy/bin/,,' \
+      -e 's,uwsm app -- ,,' \
+      -e 's/@0//' \
+      -e 's/,@/,code:/' \
+      -e 's/^0,/,/' \
+      -e 's/^1,/SHIFT,/' \
+      -e 's/^4,/CTRL,/' \
+      -e 's/^5,/SHIFT CTRL,/' \
+      -e 's/^8,/ALT,/' \
+      -e 's/^9,/SHIFT ALT,/' \
+      -e 's/^12,/CTRL ALT,/' \
+      -e 's/^13,/SHIFT CTRL ALT,/' \
+      -e 's/^64,/SUPER,/' \
+      -e 's/^65,/SUPER SHIFT,/' \
+      -e 's/^68,/SUPER CTRL,/' \
+      -e 's/^69,/SUPER SHIFT CTRL,/' \
+      -e 's/^72,/SUPER ALT,/'
 }
 
 # Parse and format keybindings
-#
-# `awk` does the heavy lifting:
-# - Set the field separator to a comma ','.
-# - Joins the key combination (e.g., "SUPER + Q").
-# - Joins the command that the key executes.
-# - Prints everything in a nicely aligned format.
 parse_bindings() {
   awk -F, '
+BEGIN {
+    print "╔════════════════════════════════════════════════════════════════════════════════╗"
+    print "║                            HYPRLAND KEYBINDINGS                                ║"
+    print "╠═════════════════════════════════════╦══════════════════════════════════════════╣"
+    print "║ Key Combination                     ║ Action                                   ║"
+    print "╠═════════════════════════════════════╬══════════════════════════════════════════╣"
+    count = 0
+    max_width = 35
+}
 {
+    count++
     # Combine the modifier and key (first two fields)
     key_combo = $1 " + " $2;
 
@@ -66,21 +68,48 @@ parse_bindings() {
         gsub(/^[ \t]+|[ \t]+$/, "", action);
         gsub(/[ \t]+/, " ", key_combo);  # Collapse multiple spaces to one
 
-        # Escape XML entities
-        gsub(/&/, "\\&amp;", action);
-        gsub(/</, "\\&lt;", action);
-        gsub(/>/, "\\&gt;", action);
-        gsub(/"/, "\\&quot;", action);
-        gsub(/'"'"'/, "\\&apos;", action);
+        # Escape special characters for display
+        gsub(/&/, "\\&", action);
+        gsub(/</, "\\<", action);
+        gsub(/>/, "\\>", action);
     }
 
     if (action != "") {
-        printf "%-35s → %s\n", key_combo, action;
+        # Truncate action if too long
+        if (length(action) > 40) {
+            action = substr(action, 1, 37) "..."
+        }
+        
+        # Format with borders
+        printf "║ %-35s ║ %-40s ║\n", key_combo, action;
     }
+}
+END {
+    print "╚═════════════════════════════════════╩══════════════════════════════════════════╝"
+    printf "\nTotal bindings: %d\n", count
 }'
 }
 
-dynamic_bindings | \
-  sort -u | \
-  parse_bindings | \
-  walker --dmenu --theme keybindings -p 'Keybindings'
+# Main execution
+echo "Fetching Hyprland keybindings..."
+echo ""
+
+# Check if hyprctl is available
+if ! command -v hyprctl >/dev/null 2>&1; then
+  echo "Error: hyprctl not found. Are you running Hyprland?"
+  exit 1
+fi
+
+# Check if jq is available
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is required but not installed. Please install jq."
+  exit 1
+fi
+
+# Execute and display
+dynamic_bindings | sort -u | parse_bindings
+
+# Alternative simple view (uncomment to use instead)
+# echo ""
+# echo "=== SIMPLE VIEW ==="
+# hyprctl binds | grep -E "^[[:space:]]*bind"
