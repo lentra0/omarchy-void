@@ -47,6 +47,10 @@ The installation is divided into logical modules:
 | `08-theme.sh` | Theme configuration and LazyVim setup |
 | `09-misc.sh` | System PATH configuration and cursor theme |
 
+## Troubleshooting
+
+- Installation log: `~/.cache/omarchy/logs/`
+
 ## Configuration
 
 ### Services Enabled
@@ -60,6 +64,35 @@ The following runit services are automatically enabled:
 - `polkitd` - PolicyKit authorization
 - `bluetoothd` - Bluetooth service
 
+## Keybindings
+
+| Category | Key Combination | Action |
+|----------|-----------------|--------|
+| **Window Management** | `SUPER + Q` | Close window |
+| | `SUPER + F` | Toggle fullscreen |
+| | `SUPER + A` | Toggle floating mode |
+| | `SUPER + J` | Toggle split direction |
+| **Window Movement** | `SUPER + mouse drag` | Move window |
+| | `SUPER ALT + ←/→/↑/↓` | Swap window position |
+| | `SUPER CTRL + ←/→` | Move window to previous/next workspace |
+| **Application Launch** | `SUPER + Return` | Open terminal |
+| | `SUPER + D` | Application launcher |
+| | `SUPER + B` | Open browser |
+| | `SUPER + E` | Open file manager |
+| | `SUPER + Y` | Open Yazi (TUI file manager) |
+| **Tools & Utilities** | `SUPER + L` | Open LazyGit |
+| | `SUPER + C` | Open LazyDocker |
+| | `SUPER + T` | Open btop |
+| **Workspace Control** | `SUPER + 1-8` | Switch to workspace 1-8 |
+| | `SUPER + ←/→` | Switch to previous/next workspace |
+| **System Controls** | `SUPER + ESC` | Lock screen |
+| | `SUPER SHIFT + S` | Screenshot region |
+
+---
+
+*Note: These are the most commonly used keybindings. For a complete list, run `omarchy-menu-keybindings` in your terminal.*  
+*Hold `SHIFT` with volume/brightness keys for fine adjustment.*
+
 ## Credits & Acknowledgments
 
 This project builds upon the work of several amazing open-source projects:
@@ -67,15 +100,14 @@ This project builds upon the work of several amazing open-source projects:
 ### **Original Omarchy**
 Massive thanks to the original [**Omarchy**](https://github.com/basecamp/omarchy) project by Basecamp. This configuration is a port of their excellent Arch Linux setup to Void Linux.
 
-### **Hyprland for Void Linux**
-Special thanks to [**Makrennel**](https://github.com/Makrennel) for maintaining the Hyprland repository for Void Linux.
+### **Hyprland Core**
+Special thanks to [**Makrennel**](https://github.com/Makrennel/hyprland-void) and [**void-land**](https://github.com/void-land/hyprland-void-packages) for maintaining the Hyprland repositories for Void Linux.
+
+### **ZSH Configuration**
+Clean and efficient ZSH setup by [**gh0stzk**](https://github.com/gh0stzk/dotfiles), providing useful aliases, functions, and prompt customization.
 
 ### **Cursor Theme**
-Beautiful cursor theme provided by [**vinceliuice**](https://github.com/vinceliuice) with the MacTahoe icon theme.
-
-## Troubleshooting
-
-- Installation log: `~/.cache/omarchy/logs/`
+Beautiful cursor theme provided by [**vinceliuice**](https://github.com/vinceliuice/MacTahoe-icon-theme) with the MacTahoe icon theme.
 
 ## License
 
