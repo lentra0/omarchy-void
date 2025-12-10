@@ -20,10 +20,10 @@ install_packages "${SYSTEM_SERVICES[@]}"
 
 # Networking
 NETWORKING=(
+  NetworkManager
   wpa_supplicant
   wifish
   wpa-cute
-  wpa_gui
 )
 
 install_packages "${NETWORKING[@]}"
@@ -60,4 +60,3 @@ for service in "${SERVICES_TO_ENABLE[@]}"; do
 done
 
 module_end
-
