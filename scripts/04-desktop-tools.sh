@@ -97,13 +97,13 @@ execute tar -xzf "$GAZELLE_TAR" -C /tmp
 
 # Install Gazelle TUI
 echo "Installing Gazelle TUI files..."
-execute mkdir -p /usr/share/gazelle-tui
-execute cp "$GAZELLE_DIR/network.py" /usr/share/gazelle-tui/
-execute cp "$GAZELLE_DIR/app.py" /usr/share/gazelle-tui/
+execute sudo mkdir -p /usr/share/gazelle-tui
+execute sudo cp "$GAZELLE_DIR/network.py" /usr/share/gazelle-tui/
+execute sudo cp "$GAZELLE_DIR/app.py" /usr/share/gazelle-tui/
 
 # Create wrapper script
 echo "Creating Gazelle TUI wrapper script..."
-execute tee /usr/bin/gazelle >/dev/null <<'EOF'
+execute sudo tee /usr/bin/gazelle >/dev/null <<'EOF'
 #!/usr/bin/bash
 # Gazelle TUI wrapper - Force system Python, not conda
 exec /usr/bin/python3 -c "
@@ -115,27 +115,27 @@ app.run()
 "
 EOF
 
-execute chmod +x /usr/bin/gazelle
+execute sudo chmod +x /usr/bin/gazelle
 
 # Install documentation
 echo "Installing Gazelle TUI documentation..."
-execute mkdir -p /usr/share/doc/gazelle-tui
-execute cp "$GAZELLE_DIR/README.md" /usr/share/doc/gazelle-tui/
+execute sudo mkdir -p /usr/share/doc/gazelle-tui
+execute sudo cp "$GAZELLE_DIR/README.md" /usr/share/doc/gazelle-tui/
 
 # Install license if exists
 if [ -f "$GAZELLE_DIR/LICENSE" ]; then
-  execute mkdir -p /usr/share/licenses/gazelle-tui
-  execute cp "$GAZELLE_DIR/LICENSE" /usr/share/licenses/gazelle-tui/
+  execute sudo mkdir -p /usr/share/licenses/gazelle-tui
+  execute sudo cp "$GAZELLE_DIR/LICENSE" /usr/share/licenses/gazelle-tui/
 fi
 
 # Cleanup
 echo "Cleaning up temporary files..."
-execute rm -rf "$GAZELLE_TAR" "$GAZELLE_DIR"
+execute sudo rm -rf "$GAZELLE_TAR" "$GAZELLE_DIR"
 
 # Add user to network group if not already
 echo "Adding user to network group..."
 if ! groups "$USER" | grep -q '\bnetwork\b'; then
-  execute usermod -aG network "$USER"
+  execute sudo usermod -aG network "$USER"
   log_success "User added to network group (re-login required)"
 else
   echo "User already in network group"
@@ -144,7 +144,7 @@ fi
 # Enable NetworkManager service
 echo "Enabling NetworkManager service..."
 if [ ! -h /var/service/NetworkManager ]; then
-  execute ln -s /etc/sv/NetworkManager /var/service/
+  execute sudo ln -s /etc/sv/NetworkManager /var/service/
   log_success "NetworkManager service enabled"
 else
   echo "NetworkManager service already enabled"
