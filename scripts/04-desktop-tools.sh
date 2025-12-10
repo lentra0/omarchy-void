@@ -54,6 +54,7 @@ INPUT_AUDIO=(
 install_packages "${INPUT_AUDIO[@]}"
 
 UTILS=(
+  powertop
   jq
   kvantum
 )

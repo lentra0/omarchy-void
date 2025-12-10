@@ -14,6 +14,8 @@ SYSTEM_SERVICES=(
   bluez
   bluez-obex
   cronie
+  tlp
+  tlp-rdw
 )
 
 install_packages "${SYSTEM_SERVICES[@]}"
@@ -53,6 +55,7 @@ SERVICES_TO_ENABLE=(
   elogind
   polkitd
   bluetoothd
+  tlp
 )
 
 for service in "${SERVICES_TO_ENABLE[@]}"; do
