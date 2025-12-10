@@ -59,4 +59,13 @@ for service in "${SERVICES_TO_ENABLE[@]}"; do
   enable_service "$service"
 done
 
+# Disable acpid to avoid conflicts with elogind
+if service_exists "acpid"; then
+  if service_enabled "acpid"; then
+    log_info "Disabling acpid (conflicts with elogind)..."
+    disable_service "acpid"
+    log_success "acpid disabled - elogind will handle power management"
+  fi
+fi
+
 module_end
