@@ -28,9 +28,9 @@ install_packages gnome-themes-extra yaru-plus
 # Configure GTK theme settings
 echo "Configuring GTK theme..."
 if command -v gsettings >/dev/null 2>&1; then
-  execute gsettings set org.gnome.desktop.interface gtk-theme "Adwaita-dark"
-  execute gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
-  execute gsettings set org.gnome.desktop.interface icon-theme "Yaru-blue"
+  gsettings set org.gnome.desktop.interface gtk-theme "Adwaita-dark"
+  gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
+  gsettings set org.gnome.desktop.interface icon-theme "Yaru-blue"
   log_success "GTK theme configured"
 else
   log_warning "gsettings not found. GTK theme configuration skipped."
