@@ -45,7 +45,9 @@ The installation is divided into logical modules:
 | `06-utilities.sh` | Various utilities and applications |
 | `07-multimedia.sh` | Audio, video, and wallpaper tools |
 | `08-theme.sh` | Theme configuration and LazyVim setup |
-| `09-misc.sh` | System PATH configuration and cursor theme |
+| `09-config.sh` | Configs setup |
+| `10-default.sh` | `.bash_profile` and `.zshrc` setup |
+| `11-misc.sh` | System PATH configuration and cursor theme |
 
 ## Troubleshooting
 
@@ -67,25 +69,30 @@ The following runit services are automatically enabled:
 ## Keybindings
 
 | Category | Key Combination | Action |
-|----------|-----------------|--------|
-| **Window Management** | `SUPER + Q` | Close window |
+|:---------|:----------------|:--------|
+| **Window Management** | | |
+| | `SUPER + Q` | Close window |
 | | `SUPER + F` | Toggle fullscreen |
 | | `SUPER + A` | Toggle floating mode |
 | | `SUPER + J` | Toggle split direction |
-| **Window Movement** | `SUPER + mouse drag` | Move window |
+| **Window Movement** | | |
 | | `SUPER ALT + ←/→/↑/↓` | Swap window position |
 | | `SUPER CTRL + ←/→` | Move window to previous/next workspace |
-| **Application Launch** | `SUPER + Return` | Open terminal |
+| **Application Launch** | | |
+| | `SUPER + Return` | Open terminal |
 | | `SUPER + D` | Application launcher |
 | | `SUPER + B` | Open browser |
 | | `SUPER + E` | Open file manager |
 | | `SUPER + Y` | Open Yazi (TUI file manager) |
-| **Tools & Utilities** | `SUPER + L` | Open LazyGit |
+| **Tools & Utilities** | | |
+| | `SUPER + L` | Open LazyGit |
 | | `SUPER + C` | Open LazyDocker |
 | | `SUPER + T` | Open btop |
-| **Workspace Control** | `SUPER + 1-8` | Switch to workspace 1-8 |
+| **Workspace Control** | | |
+| | `SUPER + 1-8` | Switch to workspace 1-8 |
 | | `SUPER + ←/→` | Switch to previous/next workspace |
-| **System Controls** | `SUPER + ESC` | Lock screen |
+| **System Controls** | | |
+| | `SUPER + ESC` | Lock screen |
 | | `SUPER SHIFT + S` | Screenshot region |
 
 ---
@@ -108,6 +115,9 @@ Clean and efficient ZSH setup by [**gh0stzk**](https://github.com/gh0stzk/dotfil
 
 ### **Cursor Theme**
 Beautiful cursor theme provided by [**vinceliuice**](https://github.com/vinceliuice/MacTahoe-icon-theme) with the MacTahoe icon theme.
+
+### **Gazelle-TUI**
+Thanks to [**Zeus-Deus**](https://github.com/Zeus-Deus/gazelle-tui) for the `gazelle-tui` project.
 
 ## License
 
