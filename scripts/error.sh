@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Ultra-powerful error handler for Void Linux setup scripts
-# Features: stack traces, timing, retry logic, debug shell, package diagnostics
+# Enhanced error handler for Void Linux setup scripts
+# Features: stack traces, timing, logging, diagnostics
 
 set -Euo pipefail
 
@@ -9,7 +9,6 @@ set -Euo pipefail
 # COLOR AND FORMATTING DEFINITIONS
 # ============================================
 readonly RED='\033[0;31m'
-readonly RED_BG='\033[41m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
@@ -21,8 +20,6 @@ readonly NC='\033[0m' # No Color
 readonly BOLD='\033[1m'
 readonly DIM='\033[2m'
 readonly UNDERLINE='\033[4m'
-readonly BLINK='\033[5m'
-readonly REVERSE='\033[7m'
 
 # ============================================
 # GLOBAL STATE VARIABLES
@@ -41,24 +38,23 @@ declare -g MODULE_DURATION=0
 declare -a CALL_STACK=()
 declare -g DEBUG_MODE=${DEBUG_MODE:-0}
 declare -g VERBOSE=${VERBOSE:-0}
+declare -g ABORT_FLAG=0
+declare -g LAST_EXECUTED_CMD="" # Track the actual executed command
 
 # ============================================
 # TIMING FUNCTIONS
 # ============================================
 
-# Get current timestamp in seconds with nanosecond precision
 current_timestamp() {
   date +%s.%N
 }
 
-# Calculate elapsed time
 calculate_duration() {
   local start="$1"
   local end="$2"
   echo "$end - $start" | bc
 }
 
-# Format duration for display
 format_duration() {
   local seconds="$1"
 
@@ -84,7 +80,6 @@ format_duration() {
 # LOGGING FUNCTIONS
 # ============================================
 
-# Log levels
 log_debug() {
   [ "$DEBUG_MODE" -eq 1 ] && echo -e "${GRAY}[DEBUG]${NC} $*" >&2
 }
@@ -114,22 +109,17 @@ SCRIPT_START_TIME=$(current_timestamp)
 # SIGNAL HANDLERS
 # ============================================
 
-# Handle interrupts
 handle_interrupt() {
   local signal=$1
   log_warning "Received $signal signal"
 
-  # Show current module if running
   if [ -n "$CURRENT_MODULE" ]; then
     log_warning "Interrupted module: $CURRENT_MODULE"
-
-    # Calculate module duration
     local module_end_time=$(current_timestamp)
     MODULE_DURATION=$(calculate_duration "$MODULE_START_TIME" "$module_end_time")
     log_info "Module ran for $(format_duration $MODULE_DURATION)"
   fi
 
-  # Show total script runtime
   local script_end_time=$(current_timestamp)
   local total_duration=$(calculate_duration "$SCRIPT_START_TIME" "$script_end_time")
   log_info "Total script runtime: $(format_duration $total_duration)"
@@ -144,19 +134,30 @@ trap 'handle_interrupt SIGTERM' SIGTERM
 # ERROR HANDLER CORE
 # ============================================
 
-# Main error handler function
 main_error_handler() {
+  # Prevent re-entry if we're already handling an error
+  if [ "$ERROR_OCCURRED" -eq 1 ] && [ "$ABORT_FLAG" -eq 1 ]; then
+    return
+  fi
+
   local line="$1"
   local command="$2"
-  local file="${3##*/}"
   local exit_code="$4"
 
   # Save error details
   ERROR_OCCURRED=1
-  ERROR_LINE="$line"
-  ERROR_FILE="$file"
-  ERROR_CMD="$command"
   ERROR_CODE="$exit_code"
+
+  # Get real error location from call stack
+  get_real_error_location
+
+  # Use the actual executed command instead of BASH_COMMAND
+  # BASH_COMMAND might show "return $exit_code" instead of the actual command
+  if [ -n "$LAST_EXECUTED_CMD" ]; then
+    ERROR_CMD="$LAST_EXECUTED_CMD"
+  else
+    ERROR_CMD="$command"
+  fi
 
   # Calculate command duration
   local command_end_time=$(current_timestamp)
@@ -170,35 +171,56 @@ main_error_handler() {
     ((frame++))
   done
 
-  # Display error banner
+  # Display error information
   show_error_banner
-
-  # Display error details
   show_error_details
 
-  # Show call stack if available
   if [ ${#CALL_STACK[@]} -gt 0 ]; then
     show_call_stack
   fi
 
-  # Show system information
   show_system_info
 
-  # Show package diagnostics if relevant
   if [[ "$ERROR_CMD" =~ xbps-install ]]; then
     show_package_diagnostics "$ERROR_CMD"
   fi
 
-  # Show environment variables if in debug mode
   if [ "$DEBUG_MODE" -eq 1 ]; then
     show_environment_info
   fi
 
-  # Interactive action menu
   show_action_menu
 }
 
-# Set trap for ERR signal
+# Get real error location (not in error.sh)
+get_real_error_location() {
+  # Get call stack
+  local frame=0
+  local stack_entry
+  local stack_line
+  local stack_func
+  local stack_file
+
+  while caller $frame >/dev/null 2>&1; do
+    stack_entry=$(caller $frame)
+    stack_line=$(echo "$stack_entry" | awk '{print $1}')
+    stack_func=$(echo "$stack_entry" | awk '{print $2}')
+    stack_file=$(echo "$stack_entry" | awk '{print $3}')
+
+    # Find first call not from error.sh
+    if [[ ! "$stack_file" =~ error\.sh$ ]] && [[ ! "$stack_func" =~ ^(main_error_handler|execute)$ ]]; then
+      ERROR_FILE="${stack_file##*/}"
+      ERROR_LINE="$stack_line"
+      return
+    fi
+    ((frame++))
+  done
+
+  # If not found, use trap information
+  ERROR_FILE="unknown"
+  ERROR_LINE="0"
+}
+
 trap 'main_error_handler ${LINENO} "$BASH_COMMAND" "${BASH_SOURCE[0]}" $?' ERR
 
 # ============================================
@@ -206,9 +228,9 @@ trap 'main_error_handler ${LINENO} "$BASH_COMMAND" "${BASH_SOURCE[0]}" $?' ERR
 # ============================================
 
 show_error_banner() {
-  echo -e "\n${RED_BG}${WHITE}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${RED_BG}${WHITE}${BOLD}║                    CRITICAL ERROR DETECTED                   ║${NC}"
-  echo -e "${RED_BG}${WHITE}${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo -e "\n${RED}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${RED}${BOLD}║                    CRITICAL ERROR DETECTED                   ║${NC}"
+  echo -e "${RED}${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
 }
 
 show_error_details() {
@@ -257,7 +279,6 @@ show_system_info() {
   echo -e "  ${CYAN}▸ UID/GID:${NC} $(id -u)/$(id -g)"
   echo -e "  ${CYAN}▸ Shell:${NC} $SHELL"
 
-  # Get distribution info
   if [ -f /etc/os-release ]; then
     local distro_name=$(grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"')
     local distro_id=$(grep ^ID= /etc/os-release | cut -d= -f2)
@@ -274,21 +295,18 @@ show_system_info() {
   echo -e "  ${CYAN}▸ Working directory:${NC} $(pwd)"
   echo -e "  ${CYAN}▸ Home directory:${NC} $HOME"
 
-  # Check sudo access
   if sudo -n true 2>/dev/null; then
     echo -e "  ${CYAN}▸ Sudo access:${NC} ${GREEN}Available${NC}"
   else
     echo -e "  ${CYAN}▸ Sudo access:${NC} ${RED}Not available${NC}"
   fi
 
-  # Check available memory
   if command -v free >/dev/null 2>&1; then
     local mem_total=$(free -h | grep Mem: | awk '{print $2}')
     local mem_used=$(free -h | grep Mem: | awk '{print $3}')
     echo -e "  ${CYAN}▸ Memory:${NC} $mem_used/$mem_total used"
   fi
 
-  # Check disk space
   if command -v df >/dev/null 2>&1; then
     local disk_usage=$(df -h . | tail -1 | awk '{print $5}')
     echo -e "  ${CYAN}▸ Disk usage:${NC} $disk_usage"
@@ -301,37 +319,28 @@ show_package_diagnostics() {
   echo -e "\n${BOLD}${WHITE}PACKAGE MANAGER DIAGNOSTICS:${NC}"
   echo -e "${DIM}────────────────────────────────────────────────${NC}"
 
-  # Check if xbps is available
   if command -v xbps-install >/dev/null 2>&1; then
     log_info "xbps package manager is available"
 
-    # Extract package names from command
     local packages=$(echo "$cmd" | grep -oP 'xbps-install.*?\K(\S+)$' || echo "$cmd" | sed -n 's/.*xbps-install.* //p')
 
     if [ -n "$packages" ]; then
       echo -e "  ${CYAN}▸ Packages mentioned:${NC} $packages"
 
-      # Check each package
       for pkg in $packages; do
         echo -e "  ${CYAN}▸ Package:${NC} $pkg"
 
-        # Check if installed
         if xbps-query "$pkg" >/dev/null 2>&1; then
           echo -e "    ${GREEN}✓ Installed${NC}"
         else
-          echo -e "    ${YELLOW}⚠ Not installed${NC}"
+          echo -e "    ${YELLOW}⌛ Not installed${NC}"
 
-          # Check if exists in repositories
           if xbps-query -Rs "$pkg" 2>/dev/null | grep -q "$pkg"; then
             echo -e "    ${GREEN}✓ Available in repositories${NC}"
-
-            # Show version info
             local pkg_info=$(xbps-query -Rs "$pkg" 2>/dev/null | head -1)
             echo -e "    ${DIM}$pkg_info${NC}"
           else
             echo -e "    ${RED}✗ NOT found in repositories${NC}"
-
-            # Suggest search
             echo -e "    ${DIM}Searching alternatives...${NC}"
             xbps-query -Rs "$pkg" 2>/dev/null || true
           fi
@@ -339,7 +348,6 @@ show_package_diagnostics() {
       done
     fi
 
-    # Check repository status
     echo -e "  ${CYAN}▸ Repository sync:${NC}"
     if sudo xbps-install -S >/dev/null 2>&1; then
       echo -e "    ${GREEN}✓ Repositories are up to date${NC}"
@@ -347,7 +355,6 @@ show_package_diagnostics() {
       echo -e "    ${RED}✗ Repository sync failed${NC}"
     fi
 
-    # Check for broken packages
     if xbps-pkgdb -a 2>&1 | grep -q "broken"; then
       echo -e "  ${RED}✗ Broken packages detected${NC}"
       xbps-pkgdb -a 2>&1 | grep "broken" || true
@@ -361,7 +368,6 @@ show_environment_info() {
   echo -e "\n${BOLD}${WHITE}ENVIRONMENT VARIABLES:${NC}"
   echo -e "${DIM}────────────────────────────────────────────────${NC}"
 
-  # Show relevant environment variables
   for var in PATH HOME USER LOGNAME SHELL EDITOR VISUAL PWD OLDPWD LANG LC_ALL; do
     if [ -n "${!var:-}" ]; then
       echo -e "  ${CYAN}▸ $var:${NC} ${!var}"
@@ -373,39 +379,18 @@ show_action_menu() {
   echo -e "\n${BOLD}${WHITE}AVAILABLE ACTIONS:${NC}"
   echo -e "${DIM}────────────────────────────────────────────────${NC}"
 
-  echo -e "  ${GREEN}[C]${NC} Continue execution"
-  echo -e "  ${YELLOW}[S]${NC} Skip current module and continue"
-  echo -e "  ${MAGENTA}[R]${NC} Retry failed command"
-  echo -e "  ${CYAN}[D]${NC} Debug shell (exit to continue)"
-  echo -e "  ${BLUE}[I]${NC} Show more info about the error"
+  echo -e "  ${MAGENTA}[R]${NC} Retry command"
   echo -e "  ${RED}[Q]${NC} Quit installation"
 
   while true; do
-    echo -en "\n${BOLD}Select action ${DIM}[C/S/R/D/I/Q]:${NC} "
+    echo -en "\n${BOLD}Select action ${DIM}[R/Q]:${NC} "
     read -r choice
 
     case "${choice,,}" in
-    c)
-      log_info "Continuing execution..."
-      # Reset error tracking for next command
-      ERROR_OCCURRED=0
-      return 0
-      ;;
-    s)
-      log_warning "Skipping current module: $CURRENT_MODULE"
-      # Calculate module duration
-      local module_end_time=$(current_timestamp)
-      MODULE_DURATION=$(calculate_duration "$MODULE_START_TIME" "$module_end_time")
-      log_info "Module ran for $(format_duration $MODULE_DURATION)"
-      return 1 # Special return code for module skip
-      ;;
     r)
       log_info "Retrying command: $ERROR_CMD"
-
-      # Update timing
       LAST_COMMAND_START_TIME=$(current_timestamp)
 
-      # Execute the command
       if eval "$ERROR_CMD"; then
         log_success "Retry successful"
         ERROR_OCCURRED=0
@@ -413,37 +398,13 @@ show_action_menu() {
       else
         local retry_status=$?
         log_error "Retry failed with code $retry_status"
-        # Stay in error handler
         continue
       fi
       ;;
-    d)
-      log_info "Opening debug shell..."
-      echo -e "${DIM}Type 'exit' to return to installer${NC}"
-      echo -e "${DIM}Type 'exit 1' to abort installation${NC}"
-
-      # Save current state
-      local debug_ps1="\\n${RED}DEBUG${NC} \\u@\\h:\\w\\n\\$ "
-
-      # Start debug shell
-      PS1="$debug_ps1" bash --norc -i
-
-      # Ask if user wants to continue
-      read -p "Continue after debug? [Y/n]: " debug_choice
-      if [[ "${debug_choice,,}" =~ ^(n|no)$ ]]; then
-        exit 1
-      fi
-      log_info "Returning from debug shell"
-      continue
-      ;;
-    i)
-      show_extended_error_info
-      continue
-      ;;
     q)
+      ABORT_FLAG=1 # Set abort flag to prevent re-triggering
       log_error "Quitting installation..."
 
-      # Calculate total runtime
       local script_end_time=$(current_timestamp)
       local total_duration=$(calculate_duration "$SCRIPT_START_TIME" "$script_end_time")
 
@@ -459,51 +420,17 @@ show_action_menu() {
       echo -e "  ${CYAN}▸ Error location:${NC} $ERROR_FILE:$ERROR_LINE"
       echo -e "  ${CYAN}▸ Exit code:${NC} $ERROR_CODE"
 
+      # Disable ERR trap before exiting to prevent re-triggering
+      trap - ERR
       exit 1
       ;;
     *)
-      echo -e "${RED}Invalid choice. Please select C, S, R, D, I, or Q${NC}"
+      echo -e "${RED}Invalid choice. Please select R or Q${NC}"
       continue
       ;;
     esac
     break
   done
-}
-
-show_extended_error_info() {
-  echo -e "\n${BOLD}${WHITE}EXTENDED ERROR INFORMATION:${NC}"
-  echo -e "${DIM}────────────────────────────────────────────────${NC}"
-
-  # Show command output if captured
-  if [ -f "/tmp/last_command_output" ]; then
-    echo -e "  ${CYAN}▸ Command output:${NC}"
-    cat /tmp/last_command_output | head -20
-    echo -e "  ${DIM}(showing first 20 lines)${NC}"
-  fi
-
-  # Show file permissions
-  if [[ "$ERROR_CMD" =~ sudo ]]; then
-    echo -e "  ${CYAN}▸ Sudo permissions check:${NC}"
-    if sudo -n true 2>/dev/null; then
-      echo -e "    ${GREEN}✓ Passwordless sudo available${NC}"
-    else
-      echo -e "    ${RED}✗ Passwordless sudo NOT available${NC}"
-    fi
-  fi
-
-  # Check disk space
-  echo -e "  ${CYAN}▸ Disk space in $(pwd):${NC}"
-  df -h . 2>/dev/null || true
-
-  # Check inotify limits
-  if [[ "$ERROR_CMD" =~ inotify ]]; then
-    echo -e "  ${CYAN}▸ Inotify limits:${NC}"
-    sysctl fs.inotify.max_user_watches 2>/dev/null || true
-  fi
-
-  # Check memory
-  echo -e "  ${CYAN}▸ Memory usage:${NC}"
-  free -h 2>/dev/null || true
 }
 
 # ============================================
@@ -538,46 +465,53 @@ module_end() {
 # COMMAND EXECUTION FUNCTIONS
 # ============================================
 
-# Safe command execution with timing and output capture
 execute() {
   local cmd="$*"
   local output_file="/tmp/last_command_output"
 
-  # Start timing
+  # Save the actual command being executed
+  LAST_EXECUTED_CMD="$cmd"
   LAST_COMMAND_START_TIME=$(current_timestamp)
 
-  # Log the command
   if [ "$VERBOSE" -eq 1 ] || [ "$DEBUG_MODE" -eq 1 ]; then
     echo -e "\n${BLUE}${BOLD}[→]${NC} ${DIM}Executing:${NC} $cmd"
   else
     echo -e "${BLUE}[→]${NC} $cmd"
   fi
 
-  # Execute command, capturing output
-  if eval "$cmd" 2>&1 | tee "$output_file"; then
+  # Execute command and capture output
+  if eval "$cmd" >"$output_file" 2>&1; then
     local exit_code=0
     local status="${GREEN}✓${NC}"
+    # Display output for successful commands only in verbose mode
+    if [ "$VERBOSE" -eq 1 ] || [ "$DEBUG_MODE" -eq 1 ]; then
+      cat "$output_file"
+    fi
   else
-    local exit_code=${PIPESTATUS[0]}
+    local exit_code=$?
     local status="${RED}✗${NC}"
+    # Always show output for failed commands
+    cat "$output_file"
   fi
 
-  # Calculate duration
   local command_end_time=$(current_timestamp)
   LAST_COMMAND_DURATION=$(calculate_duration "$LAST_COMMAND_START_TIME" "$command_end_time")
 
-  # Show result with timing
   if [ "$VERBOSE" -eq 1 ] || [ "$DEBUG_MODE" -eq 1 ] || [ $exit_code -ne 0 ]; then
     echo -e "$status ${DIM}Command completed in $(format_duration $LAST_COMMAND_DURATION) (exit: $exit_code)${NC}"
   fi
 
-  # Clean up output file
+  # Clear the executed command after successful/failed execution
+  # (but keep it in case of error for the error handler)
+  if [ $exit_code -eq 0 ]; then
+    LAST_EXECUTED_CMD=""
+  fi
+
   rm -f "$output_file"
 
   return $exit_code
 }
 
-# Install packages with detailed error handling
 install_packages() {
   local packages=("$@")
 
@@ -588,7 +522,6 @@ install_packages() {
 
   log_info "Installing ${#packages[@]} packages..."
 
-  # Try bulk installation first
   if execute sudo xbps-install -y "${packages[@]}"; then
     log_success "All packages installed successfully"
     return 0
@@ -607,70 +540,16 @@ install_packages() {
       else
         log_error "Failed to install: $pkg"
         failed_packages+=("$pkg")
-
-        # Try to find alternative
-        try_package_alternative "$pkg"
       fi
     done
 
-    # Report results
     if [ ${#failed_packages[@]} -eq 0 ]; then
       log_success "Successfully installed all $success_count packages"
       return 0
     else
       log_error "Failed to install ${#failed_packages[@]} packages: ${failed_packages[*]}"
-
-      # Show suggestions
-      for pkg in "${failed_packages[@]}"; do
-        show_package_suggestions "$pkg"
-      done
-
       return 1
     fi
-  fi
-}
-
-# Try alternative package names
-try_package_alternative() {
-  local pkg="$1"
-
-  # Known package alternatives for Void Linux
-  declare -A alternatives=(
-    ["neovim"]="nvim"
-    ["nodejs"]="nodejs18 nodejs20 nodejs"
-    ["python3-pip"]="python3-pip python-pip"
-    ["vscode"]="vscode-bin code"
-    ["docker"]="docker-engine docker-ce"
-    ["wpa_gui"]="wpa_gui-qt5 wpa_gui-qt6"
-  )
-
-  if [ -n "${alternatives[$pkg]:-}" ]; then
-    log_info "Trying alternatives for $pkg: ${alternatives[$pkg]}"
-
-    for alt in ${alternatives[$pkg]}; do
-      if execute sudo xbps-install -y "$alt"; then
-        log_success "Installed alternative: $alt instead of $pkg"
-        return 0
-      fi
-    done
-  fi
-
-  return 1
-}
-
-show_package_suggestions() {
-  local pkg="$1"
-
-  log_info "Searching for package: $pkg"
-  local search_results=$(xbps-query -Rs "$pkg" 2>/dev/null | head -5)
-
-  if [ -n "$search_results" ]; then
-    echo -e "  ${CYAN}▸ Available packages matching '$pkg':${NC}"
-    echo "$search_results" | while read -r line; do
-      echo -e "    ${DIM}$line${NC}"
-    done
-  else
-    echo -e "  ${RED}▸ No packages found matching '$pkg'${NC}"
   fi
 }
 
@@ -678,19 +557,16 @@ show_package_suggestions() {
 # SERVICE MANAGEMENT FUNCTIONS
 # ============================================
 
-# Check if service exists
 service_exists() {
   local service="$1"
   [ -d "/etc/sv/$service" ]
 }
 
-# Check if service is enabled
 service_enabled() {
   local service="$1"
   [ -L "/var/service/$service" ]
 }
 
-# Enable a runit service
 enable_service() {
   local service="$1"
 
@@ -715,7 +591,6 @@ enable_service() {
   fi
 }
 
-# Disable a runit service
 disable_service() {
   local service="$1"
 
@@ -735,7 +610,6 @@ disable_service() {
   fi
 }
 
-# Restart a service
 restart_service() {
   local service="$1"
 
@@ -755,7 +629,6 @@ restart_service() {
   fi
 }
 
-# Start a service
 start_service() {
   local service="$1"
 
@@ -775,7 +648,6 @@ start_service() {
   fi
 }
 
-# Check service status
 service_status() {
   local service="$1"
 
@@ -792,7 +664,6 @@ service_status() {
   fi
 }
 
-# Enable multiple services
 enable_services() {
   local services=("$@")
   local failed_services=()
@@ -815,7 +686,6 @@ enable_services() {
 # SYSTEM CHECK FUNCTIONS
 # ============================================
 
-# Check if running on Void Linux
 check_void_linux() {
   if [ ! -f "/etc/void-release" ]; then
     log_error "This script is for Void Linux only"
@@ -825,7 +695,6 @@ check_void_linux() {
   log_success "Running on Void Linux"
 }
 
-# Check if user has sudo privileges
 check_sudo_privileges() {
   if ! sudo -v >/dev/null 2>&1; then
     log_error "User $(whoami) does not have sudo privileges"
@@ -837,7 +706,6 @@ check_sudo_privileges() {
   log_success "Sudo privileges confirmed"
 }
 
-# Update xbps and system
 update_system() {
   log_info "Updating xbps package manager..."
   execute sudo xbps-install -Suy xbps
@@ -850,7 +718,6 @@ update_system() {
 # UTILITY FUNCTIONS
 # ============================================
 
-# Ask yes/no question
 ask_yesno() {
   local prompt="$1"
   local default="${2:-no}"
@@ -887,17 +754,14 @@ ask_yesno() {
   done
 }
 
-# Check if command exists
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
-# Check if package is installed (Void Linux specific)
 pkg_installed() {
   xbps-query "$1" >/dev/null 2>&1
 }
 
-# Create directory with parents
 mkdir_p() {
   local dir="$1"
   if [ ! -d "$dir" ]; then
@@ -905,7 +769,6 @@ mkdir_p() {
   fi
 }
 
-# Download file with progress
 download_file() {
   local url="$1"
   local output="$2"
@@ -926,13 +789,11 @@ download_file() {
 # INITIALIZATION MESSAGE
 # ============================================
 
-# Show initialization banner
 echo -e "${BLUE}${BOLD}══════════════════════════════════════════════════════════════${NC}"
 echo -e "${BLUE}${BOLD}           OMARCHY VOID SETUP - ERROR HANDLER LOADED           ${NC}"
 echo -e "${BLUE}${BOLD}══════════════════════════════════════════════════════════════${NC}"
 log_info "Error handler initialized at $(date '+%Y-%m-%d %H:%M:%S')"
 
-# Set debug mode from environment variable if present
 if [ "$DEBUG_MODE" -eq 1 ]; then
   log_info "Debug mode enabled"
 fi
