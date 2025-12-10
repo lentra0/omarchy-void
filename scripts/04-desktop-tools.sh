@@ -26,6 +26,9 @@ install_packages "${SECURITY_TOOLS[@]}"
 # Fonts
 FONTS=(
   nerd-fonts
+  font-awesome
+  font-awesome5
+  font-awesome6
 )
 
 install_packages "${FONTS[@]}"
@@ -58,4 +61,3 @@ UTILS=(
 install_packages "${UTILS[@]}"
 
 module_end
-

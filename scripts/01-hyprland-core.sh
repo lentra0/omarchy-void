@@ -13,6 +13,8 @@ execute echo "repository=https://github.com/void-land/hyprland-void-packages/rel
 # Update repository index
 execute sudo xbps-install -S
 
+install_packages base-devel
+
 # Check available Hyprland packages
 echo "Checking available Hyprland packages..."
 execute xbps-query -Rs hypr
