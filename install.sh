@@ -28,7 +28,7 @@ source ${WORKDIR}/scripts/10-default.sh
 source ${WORKDIR}/scripts/11-misc.sh
 
 echo -e "${GREEN}${BOLD}========================================${NC}"
-echo -e "${GREEN}${BOLD}    All modules installed successfully!${NC}"
+echo -e "${GREEN}${BOLD}    All modules installed successfully! ${NC}"
 echo -e "${GREEN}${BOLD}========================================${NC}"
 
 # Final instructions
