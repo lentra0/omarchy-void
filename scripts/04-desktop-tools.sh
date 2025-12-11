@@ -37,6 +37,7 @@ install_packages "${FONTS[@]}"
 SCREENSHOT_CLIPBOARD=(
   grim
   slurp
+  satty
   swappy
   cliphist
   wl-clipboard
