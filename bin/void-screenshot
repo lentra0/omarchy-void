@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# Determine output directory (custom > XDG Pictures > default)
+OUTPUT_DIR="${OMARCHY_SCREENSHOT_DIR:-${XDG_PICTURES_DIR:-$HOME/Pictures}}"
+
+# Validate output directory exists
+if [[ ! -d "$OUTPUT_DIR" ]]; then
+  notify-send "Screenshot directory does not exist: $OUTPUT_DIR" -u critical -t 3000
+  exit 1
+fi
+
+# Kill any existing slurp instances
+pkill slurp
+
+# Determine mode from first argument or default to region
+MODE="${1:-region}"
+
+case "$MODE" in
+region | area)
+  # Capture selected region with annotation
+  # Use slurp to select area, grim to capture, satty for annotation
+  slurp | grim -g - - | satty \
+    --filename - \
+    --output-filename "$OUTPUT_DIR/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png" \
+    --early-exit \
+    --actions-on-enter save-to-clipboard \
+    --save-after-copy \
+    --copy-command 'wl-copy'
+  ;;
+
+full | fullscreen | output)
+  # Capture entire screen with annotation
+  # Use grim for fullscreen capture, satty for annotation
+  grim - | satty \
+    --filename - \
+    --output-filename "$OUTPUT_DIR/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png" \
+    --early-exit \
+    --actions-on-enter save-to-clipboard \
+    --save-after-copy \
+    --copy-command 'wl-copy'
+  ;;
+
+region-raw)
+  # Capture selected region WITHOUT annotation
+  # Direct save to file after area selection
+  slurp | grim -g - "$OUTPUT_DIR/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png"
+  ;;
+
+full-raw | fullscreen-raw)
+  # Capture entire screen WITHOUT annotation
+  # Direct save to file
+  grim "$OUTPUT_DIR/screenshot-$(date +'%Y-%m-%d_%H-%M-%S').png"
+  ;;
+
+*)
+  # Invalid mode - show help message
+  echo "Usage: $0 [mode]"
+  echo "Modes:"
+  echo "  region        - Select area with annotation (default)"
+  echo "  full          - Fullscreen with annotation"
+  echo "  region-raw    - Select area without annotation"
+  echo "  full-raw      - Fullscreen without annotation"
+  echo ""
+  echo "Examples:"
+  echo "  $0 region        # Select area, annotate, then save"
+  echo "  $0 full          # Fullscreen capture with annotation"
+  echo "  $0 region-raw    # Quick area capture (no annotation)"
+  echo "  $0 full-raw      # Quick fullscreen capture (no annotation)"
+  exit 1
+  ;;
+esac
+
+# Send notification if not in annotation mode (raw modes only)
+if [[ "$MODE" == *-raw ]]; then
+  notify-send "Screenshot saved" "Saved to $OUTPUT_DIR" -t 2000
+fi
