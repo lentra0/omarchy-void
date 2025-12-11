@@ -7,8 +7,8 @@ module_start "Hyprland Core Installation"
 
 # Add Hyprland Void repository
 echo "Adding Hyprland Void repository..."
-execute echo "repository=https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-x86_64-glibc" | sudo tee /etc/xbps.d/hyprland-void.conf
-execute echo "repository=https://github.com/void-land/hyprland-void-packages/releases/latest/download/" | sudo tee /etc/xbps.d/hyprland-packages.conf
+execute echo "repository=https://raw.githubusercontent.com/Makrennel/hyprland-void/repository-x86_64-glibc" | sudo tee /etc/xbps.d/20-hyprland-void.conf
+execute echo "repository=https://github.com/void-land/hyprland-void-packages/releases/latest/download/" | sudo tee /etc/xbps.d/21-hyprland-packages.conf
 
 # Update repository index
 execute sudo xbps-install -S
