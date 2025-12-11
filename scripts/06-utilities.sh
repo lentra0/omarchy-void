@@ -78,6 +78,13 @@ GAMING=(
 
 install_packages "${GAMING[@]}"
 
+# Other
+OTHER=(
+  feh
+)
+
+install_packages "${OTHER[@]}"
+
 # Web browser
 install_packages firefox
 
