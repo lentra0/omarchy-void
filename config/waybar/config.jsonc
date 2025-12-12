@@ -144,7 +144,7 @@
   },
   "custom/cpu-temp": {
     "format": " {}°C",
-    "exec": "cat /sys/class/thermal/thermal_zone0/temp | awk '{printf \"%.0f\", $1/1000}'",
+    "exec": "cat /sys/class/thermal/thermal_zone1/temp | awk '{printf \"%.0f\", $1/1000}'",
     "interval": 2,
     "on-click": "alacritty -e btop",
     "tooltip": false
