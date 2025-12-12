@@ -21,7 +21,7 @@ export EDITOR='nvim'
 export BROWSER='chromium'
 export HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 export SUDO_PROMPT="Security protocol violation: "
-export BAT_THEME="base16"
+export BAT_THEME="Catppuccin Frappe"
 
 if [ -d "$HOME/.local/bin" ] ;
   then PATH="$HOME/.local/bin:$PATH"
@@ -59,7 +59,7 @@ zstyle ':completion:*' matcher-list \
 		'+l:|=*'
 zstyle ':vcs_info:*' formats ' %B%s-[%F{magenta}%f %F{yellow}%b%f]-'
 zstyle ':fzf-tab:*' fzf-flags --style=full --height=90% --pointer '>' \
-                --color 'pointer:green:bold,bg+:-1:,fg+:green:bold,info:blue:bold,marker:yellow:bold,hl:gray:bold,hl+:yellow:bold' \
+                --color 'pointer:green:bold,bg+:-1:,fg+:green:bold,info:blue:bold,marker:yellow:bold,hl:#a0a0a0:bold,hl+:yellow:bold' \
                 --input-label ' Search ' --color 'input-border:blue,input-label:blue:bold' \
                 --list-label ' Results ' --color 'list-border:green,list-label:green:bold' \
                 --preview-label ' Preview ' --color 'preview-border:magenta,preview-label:magenta:bold'
@@ -68,6 +68,8 @@ zstyle ':fzf-tab:complete:eza:*' fzf-preview 'eza -1 --icons=always --color=alwa
 zstyle ':fzf-tab:complete:bat:*' fzf-preview 'bat --color=always --theme=base16 $realpath'
 zstyle ':fzf-tab:*' fzf-bindings 'space:accept'
 zstyle ':fzf-tab:*' accept-line enter
+
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#aaaaaa"
 
 #  ┬ ┬┌─┐┬┌┬┐┬┌┐┌┌─┐  ┌┬┐┌─┐┌┬┐┌─┐
 #  │││├─┤│ │ │││││ ┬   │││ │ │ └─┐
@@ -135,8 +137,7 @@ bindkey "^[[F" end-of-line
 #  ┌─┐┬  ┬┌─┐┌─┐
 #  ├─┤│  │├─┤└─┐
 #  ┴ ┴┴─┘┴┴ ┴└─┘
-
-alias cat="bat --theme=base16"
+alias cat="bat"
 alias ls='eza --icons=always --color=always -a'
 alias ll='eza --icons=always --color=always -la'
 
