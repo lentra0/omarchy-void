@@ -1,0 +1,8 @@
+#!/bin/bash
+
+swaylock \
+  --image ~/.local/share/omarchy/default/lockscreen.png \
+  --indicator-y-position 900% \
+  --ignore-empty-password \
+  --indicator-caps-lock \
+  --indicator-idle-visible
