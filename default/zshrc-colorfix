@@ -18,7 +18,7 @@ fi
 #   └┘ ┴ ┴┴└─└─┘
 export VISUAL="${EDITOR}"
 export EDITOR='nvim'
-export BROWSER='chromium'
+export BROWSER='firefox'
 export HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 export SUDO_PROMPT="Security protocol violation: "
 export BAT_THEME="Catppuccin Frappe"
