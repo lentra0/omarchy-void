@@ -97,7 +97,7 @@ The following runit services are automatically enabled:
 
 ---
 
-*Note: These are the most commonly used keybindings. For a complete list, run `omarchy-menu-keybindings` in your terminal.*  
+*Note: These are the most commonly used keybindings. For a complete list, run `void-keybindings` in your terminal.*  
 *Hold `SHIFT` with volume/brightness keys for fine adjustment.*
 
 ## Credits & Acknowledgments
