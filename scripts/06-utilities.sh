@@ -86,7 +86,7 @@ OTHER=(
 install_packages "${OTHER[@]}"
 
 # Web browser
-install_packages firefox
+install_packages chromium
 
 # Flatpak
 install_packages flatpak
