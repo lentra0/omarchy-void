@@ -41,6 +41,7 @@ else
   echo "Zsh not found, skipping shell change"
 fi
 
+execute mkdir -p ~/.config/zsh
 execute touch ~/.config/zsh/zcompdump.zwc
 
 module_end

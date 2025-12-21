@@ -115,7 +115,7 @@ eval "$XORRISO_CMD" || {
   exit 1
 }
 
-sudo rm -rf "$WORKDIR"
+#sudo rm -rf "$WORKDIR"
 
 echo "=== Final ISO created: $ISO_PATH ==="
 echo "Size: $(du -h "$ISO_PATH" | cut -f1)"

@@ -45,11 +45,6 @@ cat >>/home/void-chad/.bashrc <<'EOF'
 
 alias sudo='/usr/local/bin/sudo'
 
-check_sudo() {
-    if ! command -v sudo >/dev/null 2>&1; then
-    fi
-}
-check_sudo
 EOF
 
 chown void-chad:void-chad /home/void-chad/.bashrc
@@ -66,6 +61,8 @@ if ! command -v sudo >/dev/null 2>&1; then
   echo "void-chad ALL=(ALL:ALL) NOPASSWD: ALL" >/etc/sudoers.d/void-chad
   chmod 440 /etc/sudoers.d/void-chad
 fi
+
+su void-chad
 
 echo ""
 echo "User: void-chad"

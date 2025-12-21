@@ -29,7 +29,6 @@ echo ""
 
 sudo chroot "$ROOTFS" /bin/bash
 
-echo "Cleaning up..."
 sudo umount -l "$ROOTFS/dev" 2>/dev/null || true
 sudo umount -l "$ROOTFS/sys" 2>/dev/null || true
 sudo umount -l "$ROOTFS/proc" 2>/dev/null || true
