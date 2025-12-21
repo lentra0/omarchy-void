@@ -50,13 +50,34 @@ install_packages "${FS_TOOLS[@]}"
 echo "Enabling services..."
 SERVICES_TO_ENABLE=(
   dbus
+  udevd
+  agetty-tty1
+  agetty-tty2
+  agetty-tty3
+  agetty-tty4
+  agetty-tty5
+  agetty-tty6
   crond
   seatd
   elogind
   polkitd
+  NetworkManager
   bluetoothd
   #tlp
 )
+
+if [ -L "/var/service" ] && [ ! -e "/var/service" ]; then
+  echo "Fixing broken /var/service symlink..."
+  sudo rm -f "/var/service"
+  sudo mkdir -p "/run/runit/runsvdir/current"
+  sudo ln -sf "/run/runit/runsvdir/current" "/var/service"
+fi
+
+if [ ! -e "/var/service" ]; then
+  echo "Creating /var/service structure..."
+  sudo mkdir -p "/run/runit/runsvdir/current"
+  sudo ln -sf "/run/runit/runsvdir/current" "/var/service"
+fi
 
 for service in "${SERVICES_TO_ENABLE[@]}"; do
   enable_service "$service"
