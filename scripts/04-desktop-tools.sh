@@ -25,7 +25,9 @@ install_packages "${SECURITY_TOOLS[@]}"
 
 # Fonts
 FONTS=(
-  nerd-fonts
+  #nerd-fonts
+  nerd-fonts-symbols-ttf
+  nerd-fonts-otf
   font-awesome
   font-awesome5
   font-awesome6
