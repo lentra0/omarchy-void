@@ -63,6 +63,9 @@ if ! command -v sudo >/dev/null 2>&1; then
 fi
 
 su void-chad
+cd ~
+git clone https://github.com/lentra0/omarchy-void ~/.local/share/omarchy &&
+  cd ~/.local/share/omarchy && ./install.sh
 
 echo ""
 echo "User: void-chad"
