@@ -480,18 +480,12 @@ execute() {
   fi
 
   # Execute command and capture output
-  if eval "$cmd" >"$output_file" 2>&1; then
+  if eval "$cmd" 2>&1; then
     local exit_code=0
     local status="${GREEN}✓${NC}"
-    # Display output for successful commands only in verbose mode
-    if [ "$VERBOSE" -eq 1 ] || [ "$DEBUG_MODE" -eq 1 ]; then
-      cat "$output_file"
-    fi
   else
     local exit_code=$?
     local status="${RED}✗${NC}"
-    # Always show output for failed commands
-    cat "$output_file"
   fi
 
   local command_end_time=$(current_timestamp)
