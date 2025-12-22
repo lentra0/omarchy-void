@@ -15,21 +15,12 @@ unmount_all() {
     sudo umount -l "$mount_point" 2>/dev/null || true
   done
 
-  for mount in "$WORKDIR/rootfs/dev" "$WORKDIR/rootfs/sys" "$WORKDIR/rootfs/proc"; do
-    if mount | grep -q "$mount"; then
-      echo "Force unmounting $mount"
-      sudo umount -l "$mount" 2>/dev/null || true
-    fi
-  done
+  sleep 2
 
-  for dir in "$WORKDIR/iso-mount" "$WORKDIR/rootfs" "$WORKDIR/iso-build/iso-mount"; do
-    if mount | grep -q "$dir"; then
-      echo "Force unmounting $dir"
-      sudo umount -l "$dir" 2>/dev/null || true
-    fi
-  done
-
-  sleep 1
+  if mount | grep -q "$WORKDIR"; then
+    echo "Warning: Some mounts in $WORKDIR are still active"
+    mount | grep "$WORKDIR"
+  fi
 }
 
 echo "Cleaning up any previous mounts..."
