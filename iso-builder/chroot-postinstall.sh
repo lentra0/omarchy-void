@@ -32,12 +32,15 @@ fi
 
 echo "Entering chroot at $ROOTFS"
 echo ""
-echo "Available commands:"
-echo "  /tmp/chroot-setup.sh  - Run setup script (if available)"
-echo "  git clone https://github.com/lentra0/omarchy-void ~/.local/share/omarchy"
-echo "  cd ~/.local/share/omarchy && ./install.sh"
+echo "    User: void-chad"
+echo "    Password: void"
+echo "    Password root: void"
 echo ""
-echo "Type 'exit' when finished, then the script will clean up mounts."
+echo "  sudo script is located at: /usr/local/bin/sudo"
+echo "  Usage: sudo <command>"
+echo ""
+echo "  /tmp/chroot-setup.sh  - Run setup script (if available)"
+echo "  Exit when finished, then the script will clean up mounts."
 echo ""
 
 sudo chroot "$ROOTFS" /bin/bash

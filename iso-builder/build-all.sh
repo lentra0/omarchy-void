@@ -10,16 +10,26 @@ OUTPUTDIR="${OUTPUTDIR:-./output}"
 unmount_all() {
   echo "Unmounting any leftover mounts..."
 
-  for mount_point in $(mount | grep "$WORKDIR" | awk '{print $3}' | sort -r); do
-    echo "Unmounting $mount_point"
-    sudo umount -l "$mount_point" 2>/dev/null || true
+  for mount in "$WORKDIR/rootfs/dev" "$WORKDIR/rootfs/sys" "$WORKDIR/rootfs/proc"; do
+    if mount | grep -q "$mount"; then
+      echo "Unmounting $mount"
+      sudo umount -l "$mount" 2>/dev/null || true
+    fi
   done
 
-  sleep 2
+  if mount | grep -q "$WORKDIR/iso-mount"; then
+    echo "Unmounting $WORKDIR/iso-mount"
+    sudo umount -l "$WORKDIR/iso-mount" 2>/dev/null || true
+  fi
 
-  if mount | grep -q "$WORKDIR"; then
-    echo "Warning: Some mounts in $WORKDIR are still active"
-    mount | grep "$WORKDIR"
+  if mount | grep -q "$WORKDIR/rootfs"; then
+    echo "Unmounting $WORKDIR/rootfs"
+    sudo umount -l "$WORKDIR/rootfs" 2>/dev/null || true
+  fi
+
+  if mount | grep -q "$WORKDIR/iso-build/iso-mount"; then
+    echo "Unmounting $WORKDIR/iso-build/iso-mount"
+    sudo umount -l "$WORKDIR/iso-build/iso-mount" 2>/dev/null || true
   fi
 }
 
@@ -36,7 +46,7 @@ mkdir -p "$WORKDIR" "$OUTPUTDIR"
 check_deps() {
   echo "Checking dependencies..."
 
-  local deps=("git" "sudo" "curl" "wget" "xorriso" "squashfs-tools" "tar" "rsync")
+  local deps=("git" "sudo" "curl" "wget" "squashfs-tools" "tar" "xorriso" "syslinux")
   local missing=()
 
   for dep in "${deps[@]}"; do
@@ -46,7 +56,6 @@ check_deps() {
   done
 
   if [ ${#missing[@]} -gt 0 ]; then
-    echo "Installing missing dependencies: ${missing[*]}"
     sudo xbps-install -S "${missing[@]}"
   fi
 }
@@ -167,7 +176,7 @@ echo "=== STEP 4: Creating final ISO ==="
 echo ""
 echo "=== BUILD COMPLETE ==="
 echo "Base ISO:    $BASE_ISO"
-echo "Final ISO:   $OUTPUTDIR/omarcchy-void-$(date +%Y%m%d)-x86_64.iso"
+echo "Final ISO:   $OUTPUTDIR/omarchy-void-$(date +%Y%m%d)-x86_64.iso"
 echo "Work dir:    $WORKDIR"
 echo "Output dir:  $OUTPUTDIR"
 echo ""

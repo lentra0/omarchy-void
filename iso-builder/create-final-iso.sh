@@ -73,7 +73,7 @@ sudo mksquashfs "$CHROOT_DIR" "$SQUASHFS_DEST" \
   -b 1M \
   -noappend \
   -no-recovery \
-  -mem 2G 2>&1 | tee "$WORKDIR/mksquashfs.log" || {
+  -mem 2G 2>&1 || {
   echo "Error: Failed to create squashfs"
   exit 1
 }
@@ -108,23 +108,63 @@ fi
 
 echo "Building ISO with xorriso..."
 
-cd "$ISO_COPY" && sudo xorriso -as mkisofs \
-  -volid "VOID_LIVE" \
-  -isohybrid-mbr /usr/lib/syslinux/isohdpfx.bin \
-  -c "boot/isolinux/boot.cat" \
-  -b "boot/isolinux/isolinux.bin" \
-  -no-emul-boot \
-  -boot-load-size 4 \
-  -boot-info-table \
-  -eltorito-alt-boot \
-  -e "boot/grub/efiboot.img" \
-  -no-emul-boot \
-  -isohybrid-gpt-basdat \
-  -o "$ISO_PATH" . 2>&1 | tee "$WORKDIR/xorriso.log"
+# Создаем boot.cat если его нет
+if [ ! -f "$ISO_COPY/boot/isolinux/boot.cat" ]; then
+  echo "Creating boot.cat..."
+  cd "$ISO_COPY"
+  xorriso -as mkisofs \
+    -o /dev/null \
+    -c "boot/isolinux/boot.cat" \
+    -b "boot/isolinux/isolinux.bin" \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    . >/dev/null 2>&1 || true
+  cd - >/dev/null
+fi
 
+ISOHDPFX_PATH=""
+for path in "/usr/lib/syslinux/isohdpfx.bin" "/usr/share/syslinux/isohdpfx.bin" "/usr/lib/ISOLINUX/isohdpfx.bin" "/usr/lib/syslinux/bios/isohdpfx.bin"; do
+  if [ -f "$path" ]; then
+    ISOHDPFX_PATH="$path"
+    break
+  fi
+done
+
+cd "$ISO_COPY"
+if [ -n "$ISOHDPFX_PATH" ]; then
+  echo "Creating hybrid ISO with isohdpfx.bin..."
+  xorriso -as mkisofs \
+    -volid "VOID_LIVE" \
+    -isohybrid-mbr "$ISOHDPFX_PATH" \
+    -c "boot/isolinux/boot.cat" \
+    -b "boot/isolinux/isolinux.bin" \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    -eltorito-alt-boot \
+    -e "boot/grub/efiboot.img" \
+    -no-emul-boot \
+    -isohybrid-gpt-basdat \
+    -o "$ISO_PATH" .
+else
+  echo "Creating ISO without isohdpfx.bin..."
+  xorriso -as mkisofs \
+    -volid "VOID_LIVE" \
+    -c "boot/isolinux/boot.cat" \
+    -b "boot/isolinux/isolinux.bin" \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    -eltorito-alt-boot \
+    -e "boot/grub/efiboot.img" \
+    -no-emul-boot \
+    -o "$ISO_PATH" .
+fi
+XORRISO_RET=$?
 cd - >/dev/null
 
-if [ $? -eq 0 ] && [ -f "$ISO_PATH" ]; then
+if [ $XORRISO_RET -eq 0 ] && [ -f "$ISO_PATH" ]; then
   echo ""
   echo "=== Final ISO created: $ISO_PATH ==="
   echo "Size: $(du -h "$ISO_PATH" | cut -f1)"
@@ -139,13 +179,12 @@ if [ $? -eq 0 ] && [ -f "$ISO_PATH" ]; then
   sudo rm -rf "$WORKDIR"
   echo "ISO successfully created!"
 else
-  echo "ERROR: Failed to create ISO"
-  echo "Xorriso log:"
-  tail -20 "$WORKDIR/xorriso.log" 2>/dev/null || echo "No log file found"
+  echo "ERROR: Failed to create ISO with xorriso"
 
-  echo "Trying alternative method with genisoimage..."
   if command -v genisoimage >/dev/null 2>&1; then
-    cd "$ISO_COPY" && sudo genisoimage \
+    echo "Trying genisoimage as fallback..."
+    cd "$ISO_COPY"
+    genisoimage -o "$ISO_PATH" \
       -volid "VOID_LIVE" \
       -c "boot/isolinux/boot.cat" \
       -b "boot/isolinux/isolinux.bin" \
@@ -155,9 +194,10 @@ else
       -eltorito-alt-boot \
       -e "boot/grub/efiboot.img" \
       -no-emul-boot \
-      -o "$ISO_PATH" . 2>&1 | tee "$WORKDIR/genisoimage.log"
-
-    cd - >/dev/null
+      -rock \
+      -rational-rock \
+      -graft-points \
+      .
 
     if [ $? -eq 0 ] && [ -f "$ISO_PATH" ]; then
       echo "ISO created successfully with genisoimage!"
@@ -168,12 +208,10 @@ else
       sudo rm -rf "$WORKDIR"
     else
       echo "ERROR: Both xorriso and genisoimage failed"
-      echo "Work directory preserved at: $WORKDIR"
       exit 1
     fi
   else
-    echo "Error: genisoimage not available"
-    echo "You can install it with: sudo xbps-install -S cdrkit"
+    echo "Please install genisoimage: sudo xbps-install -S cdrkit"
     exit 1
   fi
 fi

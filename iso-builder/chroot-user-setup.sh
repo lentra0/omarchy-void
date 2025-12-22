@@ -66,12 +66,3 @@ su void-chad
 cd ~
 git clone https://github.com/lentra0/omarchy-void ~/.local/share/omarchy &&
   cd ~/.local/share/omarchy && ./install.sh
-
-echo ""
-echo "User: void-chad"
-echo "Password: void"
-echo "Password root: void"
-echo ""
-echo "sudo script is located at: /usr/local/bin/sudo"
-echo "Usage: sudo <command>"
-echo ""
