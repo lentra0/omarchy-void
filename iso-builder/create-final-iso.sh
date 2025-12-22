@@ -117,7 +117,7 @@ sudo mksquashfs "$CHROOT_DIR" "$SQUASHFS_DEST" \
   -b 1M \
   -noappend \
   -no-recovery \
-  -mem 4G \
+  -mem 8G \
   -Xdict-size 512K 2>&1 | tee "$WORKDIR/mksquashfs.log" || {
   echo "Error: Failed to create squashfs"
   echo "Log saved to: $WORKDIR/mksquashfs.log"
@@ -144,72 +144,36 @@ echo "Creating ISO: $ISO_PATH..."
 
 echo "Checking boot files..."
 
-INITRD_PATH=""
-for path in "$ISO_COPY/boot/initrd" "$ISO_COPY/boot/initrd.img" "$ISO_COPY/initrd" "$ISO_COPY/initrd.img"; do
-  if [ -f "$path" ]; then
-    INITRD_PATH="$path"
-    break
-  fi
-done
-
-if [ -z "$INITRD_PATH" ]; then
-  INITRD_PATH=$(find "$ISO_COPY" -name "initrd*" -type f | head -1)
+if [ ! -f "$ISO_COPY/boot/isolinux/isolinux.bin" ]; then
+  echo "Error: isolinux.bin not found at $ISO_COPY/boot/isolinux/isolinux.bin"
+  echo "Available files in boot/isolinux:"
+  ls -la "$ISO_COPY/boot/isolinux/" 2>/dev/null || echo "Directory not found"
+  exit 1
 fi
 
-VMLINUZ_PATH=""
-for path in "$ISO_COPY/boot/vmlinuz" "$ISO_COPY/boot/vmlinuz.img" "$ISO_COPY/vmlinuz" "$ISO_COPY/vmlinuz.img"; do
-  if [ -f "$path" ]; then
-    VMLINUZ_PATH="$path"
-    break
-  fi
-done
-
-if [ -z "$VMLINUZ_PATH" ]; then
-  VMLINUZ_PATH=$(find "$ISO_COPY" -name "vmlinuz*" -type f | head -1)
+if [ ! -f "$ISO_COPY/boot/grub/efiboot.img" ]; then
+  echo "Warning: efiboot.img not found at $ISO_COPY/boot/grub/efiboot.img"
+  echo "Available files in boot/grub:"
+  ls -la "$ISO_COPY/boot/grub/" 2>/dev/null || echo "Directory not found"
 fi
 
-ISOLINUX_BIN=""
-for path in "$ISO_COPY/isolinux/isolinux.bin" "$ISO_COPY/boot/isolinux/isolinux.bin" "$ISO_COPY/boot/isolinux.bin"; do
-  if [ -f "$path" ]; then
-    ISOLINUX_BIN="$path"
-    break
-  fi
-done
-
-if [ -z "$ISOLINUX_BIN" ]; then
-  ISOLINUX_BIN=$(find "$ISO_COPY" -name "isolinux.bin" -type f | head -1)
-  if [ -n "$ISOLINUX_BIN" ]; then
-    echo "Found isolinux.bin at: $ISOLINUX_BIN"
-  else
-    echo "Error: Cannot find isolinux.bin"
-    exit 1
-  fi
-fi
-
-EFI_IMG=""
-for path in "$ISO_COPY/boot/grub/efi.img" "$ISO_COPY/efi.img" "$ISO_COPY/boot/efi.img"; do
-  if [ -f "$path" ]; then
-    EFI_IMG="$path"
-    break
-  fi
-done
-
-if [ -z "$EFI_IMG" ]; then
-  EFI_IMG=$(find "$ISO_COPY" -name "efi.img" -o -name "efiboot.img" -type f | head -1)
-  if [ -n "$EFI_IMG" ]; then
-    echo "Found EFI image at: $EFI_IMG"
-  else
-    echo "Note: EFI image not found, creating ISO without EFI support"
-  fi
-fi
-
-if [ ! -f "$ISO_COPY/isolinux/boot.cat" ]; then
+if [ ! -f "$ISO_COPY/boot/isolinux/boot.cat" ]; then
   echo "Creating boot.cat..."
-  sudo mkisofs -o /dev/null -b isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table "$ISO_COPY" 2>/dev/null || true
+  sudo mkisofs -o /dev/null \
+    -b "boot/isolinux/isolinux.bin" \
+    -c "boot/isolinux/boot.cat" \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    "$ISO_COPY" 2>/dev/null || {
+    echo "Warning: Failed to create boot.cat with mkisofs"
+    echo "Creating empty boot.cat..."
+    sudo touch "$ISO_COPY/boot/isolinux/boot.cat"
+  }
 fi
 
 ISOHDPFX_PATH=""
-for path in "/usr/lib/syslinux/isohdpfx.bin" "/usr/share/syslinux/isohdpfx.bin" "/usr/lib/ISOLINUX/isohdpfx.bin"; do
+for path in "/usr/lib/syslinux/isohdpfx.bin" "/usr/share/syslinux/isohdpfx.bin" "/usr/lib/ISOLINUX/isohdpfx.bin" "/usr/lib/syslinux/bios/isohdpfx.bin"; do
   if [ -f "$path" ]; then
     ISOHDPFX_PATH="$path"
     break
@@ -218,47 +182,45 @@ done
 
 echo "Building ISO with xorriso..."
 
-REL_ISOLINUX_BIN="${ISOLINUX_BIN#$ISO_COPY/}"
-if [ -n "$EFI_IMG" ]; then
-  REL_EFI_IMG="${EFI_IMG#$ISO_COPY/}"
-fi
-
-if [ -n "$EFI_IMG" ] && [ -n "$ISOHDPFX_PATH" ]; then
+if [ -f "$ISO_COPY/boot/grub/efiboot.img" ] && [ -n "$ISOHDPFX_PATH" ]; then
   echo "Creating hybrid ISO with EFI support..."
+
   xorriso -as mkisofs \
     -volid "VOID_LIVE" \
     -isohybrid-mbr "$ISOHDPFX_PATH" \
-    -c isolinux/boot.cat \
-    -b "$REL_ISOLINUX_BIN" \
+    -c "boot/isolinux/boot.cat" \
+    -b "boot/isolinux/isolinux.bin" \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \
     -eltorito-alt-boot \
-    -e "$REL_EFI_IMG" \
+    -e "boot/grub/efiboot.img" \
     -no-emul-boot \
     -isohybrid-gpt-basdat \
     -o "$ISO_PATH" \
     "$ISO_COPY"
-elif [ -n "$EFI_IMG" ]; then
+elif [ -f "$ISO_COPY/boot/grub/efiboot.img" ]; then
   echo "Creating ISO with EFI support (no hybrid MBR)..."
+
   xorriso -as mkisofs \
     -volid "VOID_LIVE" \
-    -c isolinux/boot.cat \
-    -b "$REL_ISOLINUX_BIN" \
+    -c "boot/isolinux/boot.cat" \
+    -b "boot/isolinux/isolinux.bin" \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \
     -eltorito-alt-boot \
-    -e "$REL_EFI_IMG" \
+    -e "boot/grub/efiboot.img" \
     -no-emul-boot \
     -o "$ISO_PATH" \
     "$ISO_COPY"
 else
   echo "Creating ISO without EFI support..."
+
   xorriso -as mkisofs \
     -volid "VOID_LIVE" \
-    -c isolinux/boot.cat \
-    -b "$REL_ISOLINUX_BIN" \
+    -c "boot/isolinux/boot.cat" \
+    -b "boot/isolinux/isolinux.bin" \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \

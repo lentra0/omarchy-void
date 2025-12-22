@@ -10,27 +10,26 @@ OUTPUTDIR="${OUTPUTDIR:-./output}"
 unmount_all() {
   echo "Unmounting any leftover mounts..."
 
+  for mount_point in $(mount | grep "$WORKDIR" | awk '{print $3}' | sort -r); do
+    echo "Unmounting $mount_point"
+    sudo umount -l "$mount_point" 2>/dev/null || true
+  done
+
   for mount in "$WORKDIR/rootfs/dev" "$WORKDIR/rootfs/sys" "$WORKDIR/rootfs/proc"; do
     if mount | grep -q "$mount"; then
-      echo "Unmounting $mount"
+      echo "Force unmounting $mount"
       sudo umount -l "$mount" 2>/dev/null || true
     fi
   done
 
-  if mount | grep -q "$WORKDIR/iso-mount"; then
-    echo "Unmounting $WORKDIR/iso-mount"
-    sudo umount -l "$WORKDIR/iso-mount" 2>/dev/null || true
-  fi
+  for dir in "$WORKDIR/iso-mount" "$WORKDIR/rootfs" "$WORKDIR/iso-build/iso-mount"; do
+    if mount | grep -q "$dir"; then
+      echo "Force unmounting $dir"
+      sudo umount -l "$dir" 2>/dev/null || true
+    fi
+  done
 
-  if mount | grep -q "$WORKDIR/rootfs"; then
-    echo "Unmounting $WORKDIR/rootfs"
-    sudo umount -l "$WORKDIR/rootfs" 2>/dev/null || true
-  fi
-
-  if mount | grep -q "$WORKDIR/iso-build/iso-mount"; then
-    echo "Unmounting $WORKDIR/iso-build/iso-mount"
-    sudo umount -l "$WORKDIR/iso-build/iso-mount" 2>/dev/null || true
-  fi
+  sleep 1
 }
 
 echo "Cleaning up any previous mounts..."
