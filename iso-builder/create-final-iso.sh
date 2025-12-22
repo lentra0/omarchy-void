@@ -20,14 +20,6 @@ if [ ! -d "$CHROOT_DIR" ]; then
   exit 1
 fi
 
-for cmd in unsquashfs mksquashfs xorriso; do
-  if ! command -v $cmd >/dev/null 2>&1; then
-    echo "Installing $cmd..."
-    sudo xbps-install -S squashfs-tools xorriso
-    break
-  fi
-done
-
 echo "=== Creating final ISO ==="
 
 WORKDIR="./work/iso-build"
@@ -57,6 +49,19 @@ echo "Copying ISO structure..."
 sudo umount "$ISO_MOUNT"
 echo "ISO structure copied successfully"
 
+echo "Fixing permissions on ISO files..."
+sudo chmod -R a+r "$ISO_COPY" 2>/dev/null || true
+
+if [ -f "$ISO_COPY/boot/initrd" ]; then
+  echo "Setting read permissions on initrd..."
+  sudo chmod 644 "$ISO_COPY/boot/initrd" 2>/dev/null || true
+fi
+
+if [ -f "$ISO_COPY/boot/vmlinuz" ]; then
+  echo "Setting read permissions on vmlinuz..."
+  sudo chmod 644 "$ISO_COPY/boot/vmlinuz" 2>/dev/null || true
+fi
+
 SQUASHFS_DEST="$ISO_COPY/LiveOS/squashfs.img"
 if [ ! -d "$(dirname "$SQUASHFS_DEST")" ]; then
   echo "Error: LiveOS directory not found in ISO"
@@ -82,9 +87,10 @@ echo "Squashfs created: $(sudo du -h "$SQUASHFS_DEST" | cut -f1)"
 
 DATE=$(date +%Y%m%d)
 ISO_NAME="omarchy-void-$DATE-x86_64.iso"
-ISO_PATH="$OUTPUT_DIR/$ISO_NAME"
 
+OUTPUT_DIR=$(realpath -m "$OUTPUT_DIR")
 mkdir -p "$OUTPUT_DIR"
+ISO_PATH="$OUTPUT_DIR/$ISO_NAME"
 
 echo "Creating ISO: $ISO_PATH..."
 
@@ -108,7 +114,6 @@ fi
 
 echo "Building ISO with xorriso..."
 
-# Создаем boot.cat если его нет
 if [ ! -f "$ISO_COPY/boot/isolinux/boot.cat" ]; then
   echo "Creating boot.cat..."
   cd "$ISO_COPY"
@@ -131,37 +136,54 @@ for path in "/usr/lib/syslinux/isohdpfx.bin" "/usr/share/syslinux/isohdpfx.bin" 
   fi
 done
 
+echo "Verifying file permissions..."
+CRITICAL_FILES=("$ISO_COPY/boot/initrd" "$ISO_COPY/boot/vmlinuz" "$ISOLINUX_BIN" "$EFI_IMG")
+for file in "${CRITICAL_FILES[@]}"; do
+  if [ -f "$file" ]; then
+    perms=$(stat -c "%A" "$file" 2>/dev/null || echo "unknown")
+    echo "  $(basename "$file"): $perms"
+    if [ "$perms" != "-r--r--r--" ] && [ "$perms" != "-rw-r--r--" ]; then
+      echo "  Fixing permissions on $file"
+      sudo chmod 644 "$file" 2>/dev/null || true
+    fi
+  fi
+done
+
+echo "Creating ISO with absolute path: $ISO_PATH"
 cd "$ISO_COPY"
+
+XORRISO_CMD="xorriso -as mkisofs \
+  -volid 'VOID_LIVE' \
+  -c 'boot/isolinux/boot.cat' \
+  -b 'boot/isolinux/isolinux.bin' \
+  -no-emul-boot \
+  -boot-load-size 4 \
+  -boot-info-table \
+  -eltorito-alt-boot \
+  -e 'boot/grub/efiboot.img' \
+  -no-emul-boot \
+  -o '$ISO_PATH'"
+
 if [ -n "$ISOHDPFX_PATH" ]; then
   echo "Creating hybrid ISO with isohdpfx.bin..."
-  xorriso -as mkisofs \
-    -volid "VOID_LIVE" \
-    -isohybrid-mbr "$ISOHDPFX_PATH" \
-    -c "boot/isolinux/boot.cat" \
-    -b "boot/isolinux/isolinux.bin" \
+  XORRISO_CMD="xorriso -as mkisofs \
+    -volid 'VOID_LIVE' \
+    -isohybrid-mbr '$ISOHDPFX_PATH' \
+    -c 'boot/isolinux/boot.cat' \
+    -b 'boot/isolinux/isolinux.bin' \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \
     -eltorito-alt-boot \
-    -e "boot/grub/efiboot.img" \
+    -e 'boot/grub/efiboot.img' \
     -no-emul-boot \
     -isohybrid-gpt-basdat \
-    -o "$ISO_PATH" .
-else
-  echo "Creating ISO without isohdpfx.bin..."
-  xorriso -as mkisofs \
-    -volid "VOID_LIVE" \
-    -c "boot/isolinux/boot.cat" \
-    -b "boot/isolinux/isolinux.bin" \
-    -no-emul-boot \
-    -boot-load-size 4 \
-    -boot-info-table \
-    -eltorito-alt-boot \
-    -e "boot/grub/efiboot.img" \
-    -no-emul-boot \
-    -o "$ISO_PATH" .
+    -o '$ISO_PATH'"
 fi
-XORRISO_RET=$?
+
+eval "$XORRISO_CMD" 2>&1 | grep -v "libburn\|libisofs" || true
+
+XORRISO_RET=${PIPESTATUS[0]}
 cd - >/dev/null
 
 if [ $XORRISO_RET -eq 0 ] && [ -f "$ISO_PATH" ]; then
@@ -179,39 +201,41 @@ if [ $XORRISO_RET -eq 0 ] && [ -f "$ISO_PATH" ]; then
   sudo rm -rf "$WORKDIR"
   echo "ISO successfully created!"
 else
-  echo "ERROR: Failed to create ISO with xorriso"
+  echo "ERROR: Failed to create ISO with xorriso (code: $XORRISO_RET)"
 
-  if command -v genisoimage >/dev/null 2>&1; then
-    echo "Trying genisoimage as fallback..."
-    cd "$ISO_COPY"
-    genisoimage -o "$ISO_PATH" \
-      -volid "VOID_LIVE" \
-      -c "boot/isolinux/boot.cat" \
-      -b "boot/isolinux/isolinux.bin" \
-      -no-emul-boot \
-      -boot-load-size 4 \
-      -boot-info-table \
-      -eltorito-alt-boot \
-      -e "boot/grub/efiboot.img" \
-      -no-emul-boot \
-      -rock \
-      -rational-rock \
-      -graft-points \
-      .
+  echo "Trying alternative method..."
 
-    if [ $? -eq 0 ] && [ -f "$ISO_PATH" ]; then
-      echo "ISO created successfully with genisoimage!"
+  cd "$ISO_COPY"
+
+  TEMP_ISO="$WORKDIR/temp.iso"
+  xorriso -as mkisofs \
+    -volid "VOID_LIVE" \
+    -c "boot/isolinux/boot.cat" \
+    -b "boot/isolinux/isolinux.bin" \
+    -no-emul-boot \
+    -boot-load-size 4 \
+    -boot-info-table \
+    -o "$TEMP_ISO" . 2>/dev/null
+
+  if [ -f "$TEMP_ISO" ]; then
+    echo "Temporary ISO created, adding EFI boot image..."
+
+    xorriso -indev "$TEMP_ISO" \
+      -boot_image any replay \
+      -append_partition 2 0xef "$EFI_IMG" \
+      -outdev "$ISO_PATH" 2>/dev/null
+
+    if [ -f "$ISO_PATH" ]; then
+      echo "ISO created successfully with alternative method!"
       if [ "$(id -u)" != "0" ]; then
         sudo chown $(id -u):$(id -g) "$ISO_PATH" 2>/dev/null || true
       fi
       (cd "$OUTPUT_DIR" && sha256sum "$ISO_NAME" >"$ISO_NAME.sha256")
       sudo rm -rf "$WORKDIR"
-    else
-      echo "ERROR: Both xorriso and genisoimage failed"
-      exit 1
+      exit 0
     fi
-  else
-    echo "Please install genisoimage: sudo xbps-install -S cdrkit"
-    exit 1
   fi
+
+  echo "ERROR: All methods failed"
+  exit 1
 fi
