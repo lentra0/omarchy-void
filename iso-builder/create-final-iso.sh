@@ -47,23 +47,18 @@ else
 fi
 
 echo "Copying ISO structure..."
-(cd "$ISO_MOUNT" && sudo tar cf - .) | (cd "$ISO_COPY" && sudo tar xpf -) 2>/dev/null || {
-  echo "Error: Failed to copy ISO structure with tar"
-  if command -v rsync >/dev/null 2>&1; then
-    echo "Trying rsync..."
-    sudo rsync -aHAX "$ISO_MOUNT/" "$ISO_COPY/" 2>/dev/null || {
-      echo "Error: Failed to copy ISO structure with rsync"
-      sudo umount "$ISO_MOUNT"
-      exit 1
-    }
-  else
-    echo "Error: Need rsync or tar to copy ISO structure"
-    sudo umount "$ISO_MOUNT"
-    exit 1
-  fi
+sudo rsync -aHAX "$ISO_MOUNT/" "$ISO_COPY/" 2>/dev/null || {
+  echo "Error: Failed to copy ISO structure with rsync"
+  sudo umount "$ISO_MOUNT"
+  exit 1
 }
 
 sudo umount "$ISO_MOUNT"
+
+echo "Fixing permissions on boot files..."
+sudo chmod -R a+r "$ISO_COPY" 2>/dev/null || true
+sudo chmod +r "$ISO_COPY/boot/initrd" 2>/dev/null || true
+sudo chmod +r "$ISO_COPY/boot/vmlinuz" 2>/dev/null || true
 
 SQUASHFS_DEST=""
 if [ -d "$ISO_COPY/LiveOS" ]; then
@@ -120,29 +115,62 @@ DATE=$(date +%Y%m%d)
 ISO_NAME="omarchy-void-$DATE-x86_64.iso"
 ISO_PATH="$OUTPUT_DIR/$ISO_NAME"
 
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$OUTPUTDIR"
 
 echo "Creating ISO: $ISO_PATH..."
 
-BOOT_FILES=(
-  "$ISO_COPY/isolinux/isolinux.bin"
-  "$ISO_COPY/boot/grub/efi.img"
-)
+echo "Checking boot files..."
+if [ ! -f "$ISO_COPY/boot/initrd" ]; then
+  echo "Warning: initrd not found at $ISO_COPY/boot/initrd"
+  ALT_INITRD=$(find "$ISO_COPY" -name "initrd" -o -name "initrd.img" -type f | head -1)
+  if [ -n "$ALT_INITRD" ]; then
+    echo "Found initrd at: $ALT_INITRD"
+  else
+    echo "Error: Cannot find initrd file"
+    exit 1
+  fi
+fi
 
-for file in "${BOOT_FILES[@]}"; do
-  if [ ! -f "$file" ]; then
-    echo "Warning: Boot file not found: $file"
-    if [ "$file" = "$ISO_COPY/isolinux/isolinux.bin" ]; then
-      ALT_FILE=$(find "$ISO_COPY" -name "isolinux.bin" -type f | head -1)
-      if [ -n "$ALT_FILE" ]; then
-        echo "Found alternative: $ALT_FILE"
-      fi
-    fi
+ISOLINUX_BIN=""
+for path in "$ISO_COPY/isolinux/isolinux.bin" "$ISO_COPY/boot/isolinux/isolinux.bin" "$ISO_COPY/boot/isolinux.bin"; do
+  if [ -f "$path" ]; then
+    ISOLINUX_BIN="$path"
+    break
   fi
 done
 
+if [ -z "$ISOLINUX_BIN" ]; then
+  echo "Warning: isolinux.bin not found at standard locations"
+  ISOLINUX_BIN=$(find "$ISO_COPY" -name "isolinux.bin" -type f | head -1)
+  if [ -n "$ISOLINUX_BIN" ]; then
+    echo "Found isolinux.bin at: $ISOLINUX_BIN"
+  else
+    echo "Error: Cannot find isolinux.bin"
+    exit 1
+  fi
+fi
+
+EFI_IMG=""
+for path in "$ISO_COPY/boot/grub/efi.img" "$ISO_COPY/efi.img" "$ISO_COPY/boot/efi.img"; do
+  if [ -f "$path" ]; then
+    EFI_IMG="$path"
+    break
+  fi
+done
+
+if [ -z "$EFI_IMG" ]; then
+  echo "Warning: efi.img not found at standard locations"
+  EFI_IMG=$(find "$ISO_COPY" -name "efi.img" -type f | head -1)
+  if [ -n "$EFI_IMG" ]; then
+    echo "Found efi.img at: $EFI_IMG"
+  else
+    echo "Note: efi.img not found, creating ISO without EFI support"
+  fi
+fi
+
 if [ ! -f "$ISO_COPY/isolinux/boot.cat" ]; then
-  echo "Note: boot.cat not found, will be generated"
+  echo "Creating boot.cat..."
+  sudo mkisofs -o /dev/null -b isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table "$ISO_COPY" 2>/dev/null || true
 fi
 
 ISOHDPFX_PATH=""
@@ -154,36 +182,67 @@ for path in "/usr/lib/syslinux/isohdpfx.bin" "/usr/share/syslinux/isohdpfx.bin" 
 done
 
 echo "Building ISO with xorriso..."
-if [ -n "$ISOHDPFX_PATH" ]; then
-  echo "Using isohdpfx.bin from: $ISOHDPFX_PATH"
-  xorriso -as mkisofs \
-    -volid "VOID_LIVE" \
-    -isohybrid-mbr "$ISOHDPFX_PATH" \
-    -c isolinux/boot.cat \
-    -b isolinux/isolinux.bin \
-    -no-emul-boot \
-    -boot-load-size 4 \
-    -boot-info-table \
-    -eltorito-alt-boot \
-    -e boot/grub/efi.img \
-    -no-emul-boot \
-    -isohybrid-gpt-basdat \
-    -o "$ISO_PATH" \
-    "$ISO_COPY"
+
+REL_ISOLINUX_BIN="${ISOLINUX_BIN#$ISO_COPY/}"
+REL_EFI_IMG="${EFI_IMG#$ISO_COPY/}" 2>/dev/null || true
+
+if [ -n "$EFI_IMG" ]; then
+  if [ -n "$ISOHDPFX_PATH" ]; then
+    echo "Using isohdpfx.bin from: $ISOHDPFX_PATH"
+    xorriso -as mkisofs \
+      -volid "VOID_LIVE" \
+      -isohybrid-mbr "$ISOHDPFX_PATH" \
+      -c isolinux/boot.cat \
+      -b "$REL_ISOLINUX_BIN" \
+      -no-emul-boot \
+      -boot-load-size 4 \
+      -boot-info-table \
+      -eltorito-alt-boot \
+      -e "$REL_EFI_IMG" \
+      -no-emul-boot \
+      -isohybrid-gpt-basdat \
+      -o "$ISO_PATH" \
+      "$ISO_COPY"
+  else
+    echo "Creating ISO without isohdpfx.bin..."
+    xorriso -as mkisofs \
+      -volid "VOID_LIVE" \
+      -c isolinux/boot.cat \
+      -b "$REL_ISOLINUX_BIN" \
+      -no-emul-boot \
+      -boot-load-size 4 \
+      -boot-info-table \
+      -eltorito-alt-boot \
+      -e "$REL_EFI_IMG" \
+      -no-emul-boot \
+      -o "$ISO_PATH" \
+      "$ISO_COPY"
+  fi
 else
-  echo "Creating ISO without isohdpfx.bin..."
-  xorriso -as mkisofs \
-    -volid "VOID_LIVE" \
-    -c isolinux/boot.cat \
-    -b isolinux/isolinux.bin \
-    -no-emul-boot \
-    -boot-load-size 4 \
-    -boot-info-table \
-    -eltorito-alt-boot \
-    -e boot/grub/efi.img \
-    -no-emul-boot \
-    -o "$ISO_PATH" \
-    "$ISO_COPY"
+  if [ -n "$ISOHDPFX_PATH" ]; then
+    echo "Creating ISO without EFI support..."
+    xorriso -as mkisofs \
+      -volid "VOID_LIVE" \
+      -isohybrid-mbr "$ISOHDPFX_PATH" \
+      -c isolinux/boot.cat \
+      -b "$REL_ISOLINUX_BIN" \
+      -no-emul-boot \
+      -boot-load-size 4 \
+      -boot-info-table \
+      -isohybrid-gpt-basdat \
+      -o "$ISO_PATH" \
+      "$ISO_COPY"
+  else
+    xorriso -as mkisofs \
+      -volid "VOID_LIVE" \
+      -c isolinux/boot.cat \
+      -b "$REL_ISOLINUX_BIN" \
+      -no-emul-boot \
+      -boot-load-size 4 \
+      -boot-info-table \
+      -o "$ISO_PATH" \
+      "$ISO_COPY"
+  fi
 fi
 
 if [ $? -eq 0 ] && [ -f "$ISO_PATH" ]; then
@@ -191,10 +250,15 @@ if [ $? -eq 0 ] && [ -f "$ISO_PATH" ]; then
   echo "=== Final ISO created: $ISO_PATH ==="
   echo "Size: $(du -h "$ISO_PATH" | cut -f1)"
 
+  if [ "$(id -u)" != "0" ]; then
+    sudo chown $(id -u):$(id -g) "$ISO_PATH" 2>/dev/null || true
+  fi
+
   echo "Creating checksum..."
   (cd "$OUTPUT_DIR" && sha256sum "$ISO_NAME" >"$ISO_NAME.sha256")
 
   sudo rm -rf "$WORKDIR"
+  echo "ISO successfully created!"
 else
   echo "ERROR: Failed to create ISO"
   echo "Work directory preserved at: $WORKDIR"
