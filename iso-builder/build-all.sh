@@ -4,25 +4,40 @@ set -e
 echo "=== Void Linux Custom ISO Builder ==="
 echo "Script execution started: $(date)"
 
-lsblk
-
 WORKDIR="${WORKDIR:-./work}"
 OUTPUTDIR="${OUTPUTDIR:-./output}"
 
+unmount_all() {
+  echo "Unmounting any leftover mounts..."
+
+  for mount in "$WORKDIR/rootfs/dev" "$WORKDIR/rootfs/sys" "$WORKDIR/rootfs/proc"; do
+    if mount | grep -q "$mount"; then
+      echo "Unmounting $mount"
+      sudo umount -l "$mount" 2>/dev/null || true
+    fi
+  done
+
+  if mount | grep -q "$WORKDIR/iso-mount"; then
+    echo "Unmounting $WORKDIR/iso-mount"
+    sudo umount -l "$WORKDIR/iso-mount" 2>/dev/null || true
+  fi
+
+  if mount | grep -q "$WORKDIR/rootfs"; then
+    echo "Unmounting $WORKDIR/rootfs"
+    sudo umount -l "$WORKDIR/rootfs" 2>/dev/null || true
+  fi
+
+  if mount | grep -q "$WORKDIR/iso-build/iso-mount"; then
+    echo "Unmounting $WORKDIR/iso-build/iso-mount"
+    sudo umount -l "$WORKDIR/iso-build/iso-mount" 2>/dev/null || true
+  fi
+}
+
+echo "Cleaning up any previous mounts..."
+unmount_all
+
 if [ -d "$WORKDIR" ]; then
   echo "Cleaning previous work directory..."
-  if mount | grep -q "$WORKDIR/iso-mount"; then
-    sudo umount "$WORKDIR/iso-mount" 2>/dev/null || true
-  fi
-  if mount | grep -q "$WORKDIR/rootfs/proc"; then
-    sudo umount "$WORKDIR/rootfs/proc" 2>/dev/null || true
-  fi
-  if mount | grep -q "$WORKDIR/rootfs/sys"; then
-    sudo umount "$WORKDIR/rootfs/sys" 2>/dev/null || true
-  fi
-  if mount | grep -q "$WORKDIR/rootfs/dev"; then
-    sudo umount "$WORKDIR/rootfs/dev" 2>/dev/null || true
-  fi
   sudo rm -rf "$WORKDIR/iso-mount" "$WORKDIR/rootfs" "$WORKDIR/temp" "$WORKDIR/iso-build"
 fi
 
@@ -31,7 +46,7 @@ mkdir -p "$WORKDIR" "$OUTPUTDIR"
 check_deps() {
   echo "Checking dependencies..."
 
-  local deps=("git" "sudo" "curl" "wget" "xorriso" "squashfs-tools")
+  local deps=("git" "sudo" "curl" "wget" "xorriso" "squashfs-tools" "tar" "rsync")
   local missing=()
 
   for dep in "${deps[@]}"; do
@@ -53,6 +68,8 @@ error_handler() {
   echo "Command: $2"
   echo "Code: $3"
   echo ""
+  echo "Cleaning up mounts..."
+  unmount_all
   exit 1
 }
 
@@ -160,7 +177,7 @@ echo "=== STEP 4: Creating final ISO ==="
 echo ""
 echo "=== BUILD COMPLETE ==="
 echo "Base ISO:    $BASE_ISO"
-echo "Final ISO:   $OUTPUTDIR/omarchy-void-$(date +%Y%m%d)-x86_64.iso"
+echo "Final ISO:   $OUTPUTDIR/omarcchy-void-$(date +%Y%m%d)-x86_64.iso"
 echo "Work dir:    $WORKDIR"
 echo "Output dir:  $OUTPUTDIR"
 echo ""

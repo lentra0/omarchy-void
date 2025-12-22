@@ -44,12 +44,33 @@ sudo chroot "$ROOTFS" /bin/bash
 
 echo ""
 echo "Chroot session ended"
+
+safe_umount() {
+  local path="$1"
+  local max_attempts=5
+  local attempt=1
+
+  while [ $attempt -le $max_attempts ]; do
+    if mount | grep -q "$path"; then
+      echo "Attempt $attempt to unmount $path"
+      sudo umount -l "$path" 2>/dev/null && return 0
+      sleep 1
+    else
+      return 0
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  echo "Warning: Failed to unmount $path after $max_attempts attempts"
+  return 1
+}
+
 read -p "Unmount chroot filesystems? [Y/n]: " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-  sudo umount -l "$ROOTFS/dev" 2>/dev/null || true
-  sudo umount -l "$ROOTFS/sys" 2>/dev/null || true
-  sudo umount -l "$ROOTFS/proc" 2>/dev/null || true
+  safe_umount "$ROOTFS/dev"
+  safe_umount "$ROOTFS/sys"
+  safe_umount "$ROOTFS/proc"
   echo "Chroot filesystems unmounted"
 else
   echo "Chroot filesystems left mounted at $ROOTFS"
